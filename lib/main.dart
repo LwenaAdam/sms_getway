@@ -13,9 +13,11 @@ import 'screens/contacts_screen.dart';
 import 'screens/bulk_sms_screen.dart';
 import 'screens/sms_logs_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/api_settings_screen.dart';
 import 'screens/tenant_selector_screen.dart';
 import 'screens/complete_registration_page.dart';
 import 'screens/download_app_banner.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -909,6 +911,88 @@ class _HomePageState extends State<HomePage> {
                               ],
                             );
                           },
+                        ),
+                        const SizedBox(height: AppTheme.paddingLarge),
+
+                        // API & Developer Quick Access Card
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppTheme.paddingMedium),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.primaryContainer,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    Icons.api,
+                                    color: Theme.of(context).colorScheme.primary,
+                                    size: 28,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Developer API & Docs',
+                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Integrate SMS delivery into external apps and webhooks',
+                                        style: Theme.of(context).textTheme.bodySmall,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Wrap(
+                                  spacing: 8,
+                                  children: [
+                                    OutlinedButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => const ApiSettingsScreen(),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.key, size: 18),
+                                      label: const Text('API Keys'),
+                                    ),
+                                    if (kIsWeb)
+                                      ElevatedButton.icon(
+                                        onPressed: () async {
+                                          final uri = Uri.parse('/api-docs.html');
+                                          await launchUrl(uri);
+                                        },
+                                        icon: const Icon(Icons.open_in_new, size: 18),
+                                        label: const Text('View Docs'),
+                                      )
+                                    else
+                                      ElevatedButton.icon(
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => const ApiSettingsScreen(),
+                                            ),
+                                          );
+                                        },
+                                        icon: const Icon(Icons.description, size: 18),
+                                        label: const Text('API Docs'),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                         const SizedBox(height: AppTheme.paddingLarge),
 
