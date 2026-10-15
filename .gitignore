@@ -51,7 +51,10 @@ app.*.map.json
 # Ignore most build artifacts except web
 build/*
 !build/web/
-dfjkdfk
-
 # Local Netlify folder
 .netlify
+
+# Android build outputs
+android/build/
+android/.gradle/
+android/.kotlin/
