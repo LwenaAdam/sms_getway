@@ -125,7 +125,7 @@ class _CampaignListScreenState extends State<CampaignListScreen> {
           'sent': sent,
           'failed': 0,
           'skipped': 0,
-          'pending': (totalContacts - sent).clamp(0, totalContacts) as int,
+          'pending': (totalContacts - sent).clamp(0, totalContacts),
         };
         _analyticsLoading = false;
       });
@@ -149,10 +149,10 @@ class _CampaignListScreenState extends State<CampaignListScreen> {
           .eq('status', 'skipped')
           .count(CountOption.exact);
 
-      final failed = failedResponse.count ?? 0;
-      final skipped = skippedResponse.count ?? 0;
-        final pending =
-          (totalContacts - sent - failed - skipped).clamp(0, totalContacts) as int;
+      final failed = failedResponse.count;
+      final skipped = skippedResponse.count;
+      final pending =
+          (totalContacts - sent - failed - skipped).clamp(0, totalContacts);
 
       if (!mounted) return;
       setState(() {
@@ -179,7 +179,7 @@ class _CampaignListScreenState extends State<CampaignListScreen> {
           'sent': sent,
           'failed': 0,
           'skipped': 0,
-          'pending': (totalContacts - sent).clamp(0, totalContacts) as int,
+          'pending': (totalContacts - sent).clamp(0, totalContacts),
         };
       });
     }
@@ -206,8 +206,8 @@ class _CampaignListScreenState extends State<CampaignListScreen> {
             .eq('status', 'sent')
             .count(CountOption.exact);
 
-        final totalCount = totalResponse.count ?? campaign.totalContactCount;
-        final sentCount = sentResponse.count ?? campaign.totalSentCount;
+        final totalCount = totalResponse.count;
+        final sentCount = sentResponse.count;
 
         updatedCampaigns.add(
           campaign.copyWith(

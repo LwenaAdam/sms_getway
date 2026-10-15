@@ -86,6 +86,8 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
       }
     }
 
+    if (!mounted) return;
+
     if (recipients.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select recipients')),

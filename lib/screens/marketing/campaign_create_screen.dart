@@ -27,8 +27,8 @@ class _CampaignCreateScreenState extends State<CampaignCreateScreen> {
 
   List<Contact> _availableContacts = [];
   List<Group> _availableGroups = [];
-  Set<String> _selectedContactIds = {};
-  Set<String> _selectedGroupIds = {};
+  final Set<String> _selectedContactIds = {};
+  final Set<String> _selectedGroupIds = {};
   bool _loading = false;
   bool _loadingContacts = false;
   bool _loadingGroups = false;
@@ -437,8 +437,9 @@ class _CampaignCreateScreenState extends State<CampaignCreateScreen> {
                         _selectedContactIds.clear();
                         _selectedGroupIds.clear();
                       } else {
-                        _selectedContactIds =
-                            _availableContacts.map((c) => c.id).toSet();
+                        _selectedContactIds
+                          ..clear()
+                          ..addAll(_availableContacts.map((c) => c.id));
                         // Don't auto-select groups when selecting all contacts
                       }
                     });
@@ -591,7 +592,7 @@ class _CampaignCreateScreenState extends State<CampaignCreateScreen> {
                           ),
                           if (_totalContactCount > 0)
                             Text(
-                              '${_loadedContactCount} / ${_totalContactCount} loaded',
+                              '$_loadedContactCount / $_totalContactCount loaded',
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                         ],

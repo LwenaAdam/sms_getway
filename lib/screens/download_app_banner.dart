@@ -148,12 +148,12 @@ class DownloadAppBannerCompact extends StatelessWidget {
           ),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Row(
+        child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.android, color: Colors.white, size: 20),
-            const SizedBox(width: 8),
-            const Text(
+            Icon(Icons.android, color: Colors.white, size: 20),
+            SizedBox(width: 8),
+            Text(
               'Download Android App',
               style: TextStyle(
                 color: Colors.white,
@@ -161,8 +161,8 @@ class DownloadAppBannerCompact extends StatelessWidget {
                 fontSize: 13,
               ),
             ),
-            const SizedBox(width: 4),
-            const Icon(
+            SizedBox(width: 4),
+            Icon(
               Icons.arrow_forward,
               color: Colors.white,
               size: 16,

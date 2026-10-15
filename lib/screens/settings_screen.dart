@@ -180,34 +180,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Select SMS Channel'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RadioListTile<SmsChannel>(
-              title: const Text('This Phone'),
-              subtitle: const Text('Send SMS using device SIM'),
-              value: SmsChannel.thisPhone,
-              groupValue: selectedChannel,
-              onChanged: (channel) {
-                if (channel != null) {
-                  _saveChannelPreference(channel);
-                  Navigator.pop(context);
-                }
-              },
-            ),
-            RadioListTile<SmsChannel>(
-              title: const Text('QuickSMS'),
-              subtitle: const Text('Send SMS using QuickSMS API'),
-              value: SmsChannel.quickSMS,
-              groupValue: selectedChannel,
-              onChanged: (channel) {
-                if (channel != null) {
-                  _saveChannelPreference(channel);
-                  Navigator.pop(context);
-                }
-              },
-            ),
-          ],
+        content: RadioGroup<SmsChannel>(
+          groupValue: selectedChannel,
+          onChanged: (channel) {
+            if (channel != null) {
+              _saveChannelPreference(channel);
+              Navigator.pop(context);
+            }
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              RadioListTile<SmsChannel>(
+                title: Text('This Phone'),
+                subtitle: Text('Send SMS using device SIM'),
+                value: SmsChannel.thisPhone,
+              ),
+              RadioListTile<SmsChannel>(
+                title: Text('QuickSMS'),
+                subtitle: Text('Send SMS using QuickSMS API'),
+                value: SmsChannel.quickSMS,
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -785,7 +780,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Sync Section
           ListenableBuilder(
             listenable: SyncService(),
-            builder: (context, _) {
+            builder: (syncContext, _) {
               final syncService = SyncService();
               return Column(
                 children: [
@@ -813,8 +808,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             onPressed: syncService.isOnline
                                 ? () async {
                                     await LocalDataService().syncNow();
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context)
+                                    if (syncContext.mounted) {
+                                      ScaffoldMessenger.of(syncContext)
                                           .showSnackBar(
                                         const SnackBar(
                                             content: Text('Sync completed')),
@@ -863,7 +858,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Settings Backup Section
           ListenableBuilder(
             listenable: SettingsBackupService(),
-            builder: (context, _) {
+            builder: (backupContext, _) {
               final backupService = SettingsBackupService();
               final isLoading = backupService.isSyncing;
 
@@ -873,8 +868,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                     child: Text(
                       'Settings Backup',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: Theme.of(context).primaryColor,
+                      style: Theme.of(backupContext).textTheme.labelMedium?.copyWith(
+                            color: Theme.of(backupContext).primaryColor,
                             fontWeight: FontWeight.bold,
                           ),
                     ),
@@ -900,8 +895,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ? null
                         : () async {
                             if (userId == null) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                              if (backupContext.mounted) {
+                                ScaffoldMessenger.of(backupContext).showSnackBar(
                                   const SnackBar(
                                     content: Text('User not authenticated'),
                                   ),
@@ -912,8 +907,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                             final tenantId = _tenantService.tenantId;
                             if (tenantId == null) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                              if (backupContext.mounted) {
+                                ScaffoldMessenger.of(backupContext).showSnackBar(
                                   const SnackBar(
                                     content: Text('No tenant selected'),
                                   ),
@@ -929,8 +924,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               tenantId: tenantId,
                             );
 
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                            if (backupContext.mounted) {
+                              ScaffoldMessenger.of(backupContext).showSnackBar(
                                 SnackBar(
                                   content: Text(
                                     success
@@ -958,8 +953,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ? null
                         : () async {
                             if (userId == null) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                              if (backupContext.mounted) {
+                                ScaffoldMessenger.of(backupContext).showSnackBar(
                                   const SnackBar(
                                     content: Text('User not authenticated'),
                                   ),
@@ -970,8 +965,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                             final tenantId = _tenantService.tenantId;
                             if (tenantId == null) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                              if (backupContext.mounted) {
+                                ScaffoldMessenger.of(backupContext).showSnackBar(
                                   const SnackBar(
                                     content: Text('No tenant selected'),
                                   ),
@@ -987,8 +982,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               tenantId: tenantId,
                             );
 
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                            if (backupContext.mounted) {
+                              ScaffoldMessenger.of(backupContext).showSnackBar(
                                 SnackBar(
                                   content: Text(
                                     success

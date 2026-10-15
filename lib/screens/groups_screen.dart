@@ -76,10 +76,12 @@ class _GroupsScreenState extends State<GroupsScreen> {
           .delete()
           .eq('id', id);
       _loadGroups();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Group deleted')),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
@@ -510,7 +512,7 @@ class _GroupMembersDialogState extends State<GroupMembersDialog> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Add Member'),
         content: SizedBox(
           width: 300,
@@ -543,8 +545,10 @@ class _GroupMembersDialogState extends State<GroupMembersDialog> {
                         setState(() {
                           members.add(contact);
                         });
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        if (dialogContext.mounted) {
+                          Navigator.pop(dialogContext);
+                        }
+                        ScaffoldMessenger.of(this.context).showSnackBar(
                           SnackBar(
                               content: Text('${contact.name} added to group')),
                         );
@@ -552,7 +556,7 @@ class _GroupMembersDialogState extends State<GroupMembersDialog> {
                       }
                     } catch (e) {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(this.context).showSnackBar(
                           SnackBar(content: Text('Error: $e')),
                         );
                       }

@@ -15,7 +15,7 @@ import 'marketing/campaign_list_screen.dart';
 /// - View current status
 /// - Reset counters
 class MarketingSettingsScreen extends StatefulWidget {
-  const MarketingSettingsScreen({Key? key}) : super(key: key);
+  const MarketingSettingsScreen({super.key});
 
   @override
   State<MarketingSettingsScreen> createState() =>
@@ -51,7 +51,7 @@ class _MarketingSettingsScreenState extends State<MarketingSettingsScreen> {
 
       // Load settings from Android
       final settings = await _marketingService.getSettings();
-      if (settings != null) {
+      if (settings != null && mounted) {
         setState(() {
           _isEnabled = settings['enabled'] ?? false;
           _dailyLimit = settings['daily_limit'] ?? 100;
@@ -59,12 +59,16 @@ class _MarketingSettingsScreenState extends State<MarketingSettingsScreen> {
         });
       }
     } catch (e) {
-      print('❌ Error loading settings: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading settings: $e')),
-      );
+      debugPrint('❌ Error loading settings: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading settings: $e')),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -128,6 +132,7 @@ class _MarketingSettingsScreenState extends State<MarketingSettingsScreen> {
       }
 
       if (success) {
+        if (!mounted) return;
         setState(() => _isEnabled = value);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -143,15 +148,19 @@ class _MarketingSettingsScreenState extends State<MarketingSettingsScreen> {
         throw Exception('Failed to toggle marketing');
       }
     } catch (e) {
-      print('❌ Error toggling marketing: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      debugPrint('❌ Error toggling marketing: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -161,6 +170,7 @@ class _MarketingSettingsScreenState extends State<MarketingSettingsScreen> {
     try {
       final success = await _marketingService.setDailyLimit(newLimit);
       if (success) {
+        if (!mounted) return;
         setState(() => _dailyLimit = newLimit);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -172,15 +182,19 @@ class _MarketingSettingsScreenState extends State<MarketingSettingsScreen> {
         throw Exception('Failed to update limit');
       }
     } catch (e) {
-      print('❌ Error updating limit: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      debugPrint('❌ Error updating limit: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -190,6 +204,7 @@ class _MarketingSettingsScreenState extends State<MarketingSettingsScreen> {
     try {
       final success = await _marketingService.resetDailyCounter();
       if (success) {
+        if (!mounted) return;
         setState(() => _dailySentCount = 0);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -201,15 +216,19 @@ class _MarketingSettingsScreenState extends State<MarketingSettingsScreen> {
         throw Exception('Failed to reset counter');
       }
     } catch (e) {
-      print('❌ Error resetting counter: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      debugPrint('❌ Error resetting counter: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -242,6 +261,7 @@ class _MarketingSettingsScreenState extends State<MarketingSettingsScreen> {
     try {
       final success = await _marketingService.forceCheckNow();
       if (success) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('✅ Campaign check triggered'),
@@ -252,7 +272,7 @@ class _MarketingSettingsScreenState extends State<MarketingSettingsScreen> {
         throw Exception('Failed to trigger check');
       }
     } catch (e) {
-      print('❌ Error forcing check: $e');
+      debugPrint('❌ Error forcing check: $e');
 
       // Provide helpful error message
       String errorMsg = e.toString();
@@ -260,14 +280,18 @@ class _MarketingSettingsScreenState extends State<MarketingSettingsScreen> {
         errorMsg = 'Please enable marketing automation first';
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('⚠️ $errorMsg'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('⚠️ $errorMsg'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
       _loadSettings(); // Reload to show updated counts
     }
   }

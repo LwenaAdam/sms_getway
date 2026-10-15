@@ -24,7 +24,7 @@ void main() async {
   try {
     await Supabase.initialize(
       url: AppConstants.supabaseUrl,
-      anonKey: AppConstants.supabaseAnonKey,
+      publishableKey: AppConstants.supabaseAnonKey,
     );
     debugPrint('✅ Supabase initialized successfully!');
   } catch (e) {
@@ -441,49 +441,6 @@ class _LoginPageState extends State<LoginPage> {
         errorMessage = 'Login failed: ${e.toString()}';
       });
       debugPrint('❌ Login error: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
-      }
-    }
-  }
-
-  void _signup() async {
-    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
-      setState(() {
-        errorMessage = 'Email and password are required';
-      });
-      return;
-    }
-
-    setState(() {
-      isLoading = true;
-      errorMessage = null;
-    });
-
-    try {
-      final response = await Supabase.instance.client.auth
-          .signUp(
-            email: emailController.text,
-            password: passwordController.text,
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (response.user != null && mounted) {
-        debugPrint('✅ Sign up successful: ${response.user!.email}');
-        setState(() {
-          errorMessage = 'Account created! Please login.';
-        });
-        emailController.clear();
-        passwordController.clear();
-      }
-    } catch (e) {
-      setState(() {
-        errorMessage = 'Sign up failed: ${e.toString()}';
-      });
-      debugPrint('❌ Sign up error: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -963,7 +920,7 @@ class _HomePageState extends State<HomePage> {
                                 children: [
                                   Row(
                                     children: [
-                                      Icon(Icons.warning, color: Colors.orange),
+                                      const Icon(Icons.warning, color: Colors.orange),
                                       const SizedBox(width: 8),
                                       Text(
                                         'Sync Issue Detected',
@@ -1033,45 +990,6 @@ class _HomePageState extends State<HomePage> {
               label,
               style: Theme.of(context).textTheme.bodySmall,
               textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFeatureItem(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String description,
-    required bool isDone,
-  }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppTheme.paddingMedium),
-        child: Row(
-          children: [
-            Icon(icon, color: AppTheme.primaryColor, size: 32),
-            const SizedBox(width: AppTheme.paddingMedium),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  Text(
-                    description,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              isDone ? Icons.check_circle : Icons.schedule,
-              color: isDone ? Colors.green : Colors.orange,
             ),
           ],
         ),

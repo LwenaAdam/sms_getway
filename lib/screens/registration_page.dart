@@ -108,8 +108,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
                 ),
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'Please confirm password';
-                  if (v != passwordController.text)
+                  if (v != passwordController.text) {
                     return 'Passwords do not match';
+                  }
                   return null;
                 },
               ),

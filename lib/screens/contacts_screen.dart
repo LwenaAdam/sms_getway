@@ -9,7 +9,6 @@ import '../services/csv_import_service.dart';
 import '../contacts/contact_model.dart';
 import '../groups/group_model.dart';
 import '../core/tenant_service.dart';
-import 'download_app_banner.dart';
 import 'phonebook_sync_screen.dart';
 import 'duplicate_contacts_screen.dart';
 
@@ -154,15 +153,6 @@ class _ContactsScreenState extends State<ContactsScreen>
     }
   }
 
-  /// Toggle selection mode
-  void _toggleSelectionMode() {
-    setState(() {
-      isSelectionMode = !isSelectionMode;
-      if (!isSelectionMode) {
-        selectedContactIds.clear();
-      }
-    });
-  }
 
   /// Toggle contact selection
   void _toggleContactSelection(String id) {
@@ -397,7 +387,7 @@ class _ContactsScreenState extends State<ContactsScreen>
 
           // Add member using Supabase
           final tenantId = TenantService().tenantId;
-          final uuid = const Uuid();
+          const uuid = Uuid();
           await Supabase.instance.client
               .schema('sms_gateway')
               .from('group_members')
@@ -476,10 +466,12 @@ class _ContactsScreenState extends State<ContactsScreen>
     try {
       await LocalDataService().deleteGroup(id);
       _loadGroups();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Group deleted')),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
@@ -709,7 +701,7 @@ class _ContactsScreenState extends State<ContactsScreen>
                     style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<int>(
-                  value: phoneIndex,
+                  initialValue: phoneIndex,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     contentPadding:
@@ -730,7 +722,7 @@ class _ContactsScreenState extends State<ContactsScreen>
                     style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<int?>(
-                  value: firstNameIndex,
+                  initialValue: firstNameIndex,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     contentPadding:
@@ -754,7 +746,7 @@ class _ContactsScreenState extends State<ContactsScreen>
                     style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<int?>(
-                  value: lastNameIndex,
+                  initialValue: lastNameIndex,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     contentPadding:
@@ -784,10 +776,12 @@ class _ContactsScreenState extends State<ContactsScreen>
                   ? null
                   : () {
                       final mapping = <String, int>{'phone': phoneIndex!};
-                      if (firstNameIndex != null)
+                      if (firstNameIndex != null) {
                         mapping['firstName'] = firstNameIndex!;
-                      if (lastNameIndex != null)
+                      }
+                      if (lastNameIndex != null) {
                         mapping['lastName'] = lastNameIndex!;
+                      }
                       Navigator.pop(context, mapping);
                     },
               child: const Text('Continue'),
@@ -2261,8 +2255,9 @@ class _AddContactDialogState extends State<AddContactDialog> {
     if (phone.isEmpty) return '';
     if (phone.startsWith('+')) return phone;
     if (phone.startsWith('00')) return '+${phone.substring(2)}';
-    if (phone.startsWith('0'))
+    if (phone.startsWith('0')) {
       return '$_defaultCountryCode${phone.substring(1)}';
+    }
     if (phone.startsWith('255') && phone.length >= 12) return '+$phone';
     return '$_defaultCountryCode$phone';
   }
