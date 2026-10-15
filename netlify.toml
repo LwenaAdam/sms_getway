@@ -19,6 +19,22 @@
   to = "/openapi.yaml"
   status = 200
 
+# Direct APK download routes
+[[redirects]]
+  from = "/download/app"
+  to = "/downloads/sms_gateway_pro.apk"
+  status = 200
+
+[[redirects]]
+  from = "/download/apk"
+  to = "/downloads/sms_gateway_pro.apk"
+  status = 200
+
+[[redirects]]
+  from = "/sms_gateway_pro.apk"
+  to = "/downloads/sms_gateway_pro.apk"
+  status = 200
+
 # SPA routing - redirect all other requests to index.html
 [[redirects]]
   from = "/*"

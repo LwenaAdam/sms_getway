@@ -45,12 +45,28 @@ class SmsRequest {
   });
 
   factory SmsRequest.fromJson(Map<String, dynamic> json) {
+    // Polymorphic phone resolution
+    final phone = json['phone_number'] ??
+        json['phone'] ??
+        json['to'] ??
+        json['msisdn'] ??
+        json['dest_addr'] ??
+        '';
+
+    // Polymorphic message resolution
+    final msg = json['message'] ??
+        json['text'] ??
+        json['body'] ??
+        json['sms'] ??
+        json['content'] ??
+        '';
+
     return SmsRequest(
       id: json['id'] as String? ?? '',
       tenantId: json['tenant_id'] as String? ?? '',
       apiKeyId: json['api_key_id'] as String? ?? '',
-      phoneNumber: json['phone_number'] as String? ?? '',
-      message: json['message'] as String? ?? '',
+      phoneNumber: phone.toString(),
+      message: msg.toString(),
       status: json['status'] as String? ?? 'pending',
       priority: json['priority'] as int? ?? 0,
       scheduledAt: json['scheduled_at'] != null

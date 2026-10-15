@@ -159,8 +159,20 @@ public class MainActivity extends FlutterActivity {
                 );
             }
 
-            // Send SMS
-            smsManager.sendTextMessage(phoneNumber, null, message, sentPendingIntent, null);
+            // Clean/sanitize phone number
+            String cleanPhone = phoneNumber.replaceAll("[\\s\\-\\(\\)]", "");
+
+            // Handle multi-part/long SMS automatically if > 160 chars
+            ArrayList<String> parts = smsManager.divideMessage(message);
+            if (parts.size() > 1) {
+                ArrayList<PendingIntent> sentIntents = new ArrayList<>();
+                for (int i = 0; i < parts.size(); i++) {
+                    sentIntents.add(sentPendingIntent);
+                }
+                smsManager.sendMultipartTextMessage(cleanPhone, null, parts, sentIntents, null);
+            } else {
+                smsManager.sendTextMessage(cleanPhone, null, message, sentPendingIntent, null);
+            }
             result.success(true);
         } catch (Exception e) {
             result.error("SEND_ERROR", e.getMessage(), null);
@@ -205,7 +217,18 @@ public class MainActivity extends FlutterActivity {
                         );
                     }
 
-                    smsManager.sendTextMessage(phoneNumber, null, message, sentPendingIntent, null);
+                    String cleanPhone = phoneNumber.replaceAll("[\\s\\-\\(\\)]", "");
+
+                    ArrayList<String> parts = smsManager.divideMessage(message);
+                    if (parts.size() > 1) {
+                        ArrayList<PendingIntent> sentIntents = new ArrayList<>();
+                        for (int i = 0; i < parts.size(); i++) {
+                            sentIntents.add(sentPendingIntent);
+                        }
+                        smsManager.sendMultipartTextMessage(cleanPhone, null, parts, sentIntents, null);
+                    } else {
+                        smsManager.sendTextMessage(cleanPhone, null, message, sentPendingIntent, null);
+                    }
                     sentCount++;
                 } catch (Exception e) {
                     failedNumbers.add(phoneNumber);

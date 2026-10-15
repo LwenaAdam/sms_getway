@@ -164,18 +164,32 @@ components:
   schemas:
     SendSingleSmsRequest:
       type: object
-      required:
-        - phone_number
-        - message
+      description: Single SMS dispatch payload. Supports both standard SMS Gateway Pro format and industry-standard aggregator aliases (Twilio/Beem/Selanim compatible).
       properties:
         phone_number:
           type: string
-          description: Recipient phone number in international E.164 format
+          description: Recipient phone number in international E.164 (e.g. +255...) or local Tanzanian format (07... / 255...)
+          example: "+255683274343"
+        to:
+          type: string
+          description: Standard alias for phone_number
           example: "+255683274343"
         message:
           type: string
-          description: SMS message text content
-          example: "Hello from API!"
+          description: SMS message text content (automatically divided into multi-part SMS if > 160 characters)
+          example: "Hello from SMS Gateway Pro API!"
+        text:
+          type: string
+          description: Standard alias for message
+          example: "Hello from SMS Gateway Pro API!"
+        body:
+          type: string
+          description: Standard alias for message
+          example: "Hello from SMS Gateway Pro API!"
+        sender_id:
+          type: string
+          description: Optional alphanumeric sender ID or specific SIM label
+          example: "SMSPRO"
         external_id:
           type: string
           description: Optional client tracking or reference ID

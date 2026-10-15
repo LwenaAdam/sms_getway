@@ -15,11 +15,16 @@ class _DownloadAppBannerState extends State<DownloadAppBanner> {
   bool _isDismissed = false;
 
   Future<void> _launchURL() async {
-    final url = Uri.parse(
-      'https://github.com/LWENA27/sms_getway/releases/download/v1.1.0/sms_gateway_pro_v1.1.0.apk',
-    );
+    final url = Uri.parse('/downloads/sms_gateway_pro.apk');
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      final fallbackUrl = Uri.parse(
+        'https://github.com/LWENA27/sms_getway/releases/download/v1.1.0/sms_gateway_pro_v1.1.0.apk',
+      );
+      if (await canLaunchUrl(fallbackUrl)) {
+        await launchUrl(fallbackUrl, mode: LaunchMode.externalApplication);
+      }
     }
   }
 
@@ -123,11 +128,16 @@ class DownloadAppBannerCompact extends StatelessWidget {
   const DownloadAppBannerCompact({super.key});
 
   Future<void> _launchURL() async {
-    final url = Uri.parse(
-      'https://github.com/LWENA27/sms_getway/releases/download/v1.1.0/sms_gateway_pro_v1.1.0.apk',
-    );
+    final url = Uri.parse('/downloads/sms_gateway_pro.apk');
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      final fallbackUrl = Uri.parse(
+        'https://github.com/LWENA27/sms_getway/releases/download/v1.1.0/sms_gateway_pro_v1.1.0.apk',
+      );
+      if (await canLaunchUrl(fallbackUrl)) {
+        await launchUrl(fallbackUrl, mode: LaunchMode.externalApplication);
+      }
     }
   }
 
