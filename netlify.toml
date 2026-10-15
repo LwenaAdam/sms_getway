@@ -11,7 +11,18 @@
   # Ignore all Git commits - GitHub Actions handles deployment
   ignore = "exit 0"
 
-# SPA routing - redirect all requests to index.html
+# API Documentation route
+[[redirects]]
+  from = "/api-docs"
+  to = "/api-docs.html"
+  status = 200
+
+[[redirects]]
+  from = "/openapi.yaml"
+  to = "/openapi.yaml"
+  status = 200
+
+# SPA routing - redirect all other requests to index.html
 [[redirects]]
   from = "/*"
   to = "/index.html"
