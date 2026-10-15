@@ -10,22 +10,10 @@ class AppConstants {
   //   --dart-define=SUPABASE_URL=http://127.0.0.1:54321 \
   //   --dart-define=SUPABASE_ANON_KEY=sb_publishable_...
 
-  // PRODUCTION (Remote Supabase) - fallback values
-  static const String supabaseUrl = String.fromEnvironment(
-    'SUPABASE_URL',
-    defaultValue: 'https://kzjgdeqfmxkmpmadtbpb.supabase.co',
-  );
-
-  static const String supabaseAnonKey = String.fromEnvironment(
-    'SUPABASE_ANON_KEY',
-    defaultValue:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6amdkZXFmbXhrbXBtYWR0YnBiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyOTk3NjQsImV4cCI6MjA2NDg3NTc2NH0.NTEzbvVCQ_vNTJPS5bFPSOm5XNRjUrFpSUPEWQDm434',
-  );
-
-  // LOCAL DEVELOPMENT (use this while developing)
-  // static const String supabaseUrl = 'http://127.0.0.1:54321';
-  // static const String supabaseAnonKey =
-  //     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+  // Remote Supabase Configuration
+  // Provide via .env or --dart-define flags (e.g. --dart-define-from-file=.env)
+  static const String supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  static const String supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
   // ===== APP CONFIGURATION =====
   static const String appName = 'SMS Gateway Pro';

@@ -22,6 +22,10 @@ void main() async {
 
   // Initialize Supabase
   try {
+    if (AppConstants.supabaseUrl.isEmpty || AppConstants.supabaseAnonKey.isEmpty) {
+      debugPrint('⚠️ WARNING: SUPABASE_URL or SUPABASE_ANON_KEY is not set!');
+      debugPrint('👉 Run with: flutter run --dart-define-from-file=.env');
+    }
     await Supabase.initialize(
       url: AppConstants.supabaseUrl,
       publishableKey: AppConstants.supabaseAnonKey,
