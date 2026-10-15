@@ -644,11 +644,16 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   width: double.infinity,
-                  child: Text(request.message),
+                  child: Text(
+                    request.message,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
                 ),
                 if (request.externalId != null) ...[
                   const SizedBox(height: 8),
@@ -659,19 +664,25 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.red[50],
+                      color: Theme.of(context).colorScheme.errorContainer,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.error_outline,
-                            color: Colors.red, size: 16),
+                        Icon(
+                          Icons.error_outline,
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                          size: 16,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
-                            child: Text(
-                          request.errorMessage!,
-                          style: const TextStyle(color: Colors.red),
-                        )),
+                          child: Text(
+                            request.errorMessage!,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onErrorContainer,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -749,21 +760,32 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen>
                   ),
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.grey[100],
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Theme.of(context).dividerColor,
+                      ),
                     ),
                     child: Row(
                       children: [
                         Expanded(
-                          child: Text(
+                          child: SelectableText(
                             endpoint,
-                            style: const TextStyle(fontFamily: 'monospace'),
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.copy),
+                          icon: Icon(
+                            Icons.copy,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          tooltip: 'Copy endpoint',
                           onPressed: () {
                             Clipboard.setData(ClipboardData(text: endpoint));
                             _showSuccess('Endpoint copied');
