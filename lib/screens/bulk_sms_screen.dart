@@ -399,7 +399,7 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      initialValue: selectedGroupId,
+                      value: selectedGroupId,
                       hint: const Text('Choose a group'),
                       items: availableGroups
                           .map((group) => DropdownMenuItem(

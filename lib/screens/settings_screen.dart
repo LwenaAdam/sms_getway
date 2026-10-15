@@ -180,29 +180,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Select SMS Channel'),
-        content: RadioGroup<SmsChannel>(
-          groupValue: selectedChannel,
-          onChanged: (channel) {
-            if (channel != null) {
-              _saveChannelPreference(channel);
-              Navigator.pop(context);
-            }
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              RadioListTile<SmsChannel>(
-                title: Text('This Phone'),
-                subtitle: Text('Send SMS using device SIM'),
-                value: SmsChannel.thisPhone,
-              ),
-              RadioListTile<SmsChannel>(
-                title: Text('QuickSMS'),
-                subtitle: Text('Send SMS using QuickSMS API'),
-                value: SmsChannel.quickSMS,
-              ),
-            ],
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<SmsChannel>(
+              title: const Text('This Phone'),
+              subtitle: const Text('Send SMS using device SIM'),
+              value: SmsChannel.thisPhone,
+              groupValue: selectedChannel,
+              onChanged: (channel) {
+                if (channel != null) {
+                  _saveChannelPreference(channel);
+                  Navigator.pop(context);
+                }
+              },
+            ),
+            RadioListTile<SmsChannel>(
+              title: const Text('QuickSMS'),
+              subtitle: const Text('Send SMS using QuickSMS API'),
+              value: SmsChannel.quickSMS,
+              groupValue: selectedChannel,
+              onChanged: (channel) {
+                if (channel != null) {
+                  _saveChannelPreference(channel);
+                  Navigator.pop(context);
+                }
+              },
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -829,7 +834,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               horizontal: 16, vertical: 8),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.1),
+                            color: Colors.orange.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: Colors.orange),
                           ),

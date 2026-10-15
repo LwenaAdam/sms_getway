@@ -701,7 +701,7 @@ class _ContactsScreenState extends State<ContactsScreen>
                     style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<int>(
-                  initialValue: phoneIndex,
+                  value: phoneIndex,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     contentPadding:
@@ -722,7 +722,7 @@ class _ContactsScreenState extends State<ContactsScreen>
                     style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<int?>(
-                  initialValue: firstNameIndex,
+                  value: firstNameIndex,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     contentPadding:
@@ -746,7 +746,7 @@ class _ContactsScreenState extends State<ContactsScreen>
                     style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<int?>(
-                  initialValue: lastNameIndex,
+                  value: lastNameIndex,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     contentPadding:
