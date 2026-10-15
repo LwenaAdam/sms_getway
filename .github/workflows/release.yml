@@ -36,13 +36,13 @@ jobs:
           
           ### Installation
           ```bash
-          git clone https://github.com/LWENA27/sms_getway.git
+          git clone https://github.com/LwenaAdam/sms_getway.git
           cd sms_getway
           flutter pub get
           flutter run
           ```
           
-          See [INSTALLATION.md](https://github.com/LWENA27/sms_getway/blob/main/INSTALLATION.md) for detailed setup.
+          See [DEVELOPER.md](https://github.com/LwenaAdam/sms_getway/blob/main/docs/DEVELOPER.md) for detailed setup.
           
           ### Features
           - ✅ Bulk SMS Management
@@ -57,6 +57,6 @@ jobs:
           - Android device or emulator
           - Supabase account (pre-configured)
           
-          [View Full Changelog](https://github.com/LWENA27/sms_getway/blob/main/CHANGELOG.md)
+          [View Full Changelog](https://github.com/LwenaAdam/sms_getway/blob/main/docs/CHANGELOG.md)
         draft: false
         prerelease: false

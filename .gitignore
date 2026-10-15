@@ -52,3 +52,6 @@ app.*.map.json
 build/*
 !build/web/
 dfjkdfk
+
+# Local Netlify folder
+.netlify

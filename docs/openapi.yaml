@@ -1,0 +1,313 @@
+openapi: 3.0.3
+info:
+  title: SMS Gateway Pro REST API
+  description: |
+    The SMS Gateway API enables external systems and backend applications to queue and deliver SMS messages through the SMS Gateway Pro infrastructure.
+    Messages are queued directly into Supabase and processed asynchronously by the SMS Gateway mobile/web application according to tenant routing preferences.
+
+    **Portfolio & Maintainer:**
+    - Developer: Lwena Adam Samson
+    - Portfolio: [lwena.techwareafrica.tech](https://lwena.techwareafrica.tech)
+    - GitHub: [LwenaAdam](https://github.com/LwenaAdam)
+    - Organization: [TechWare Africa](https://techwareafrica.tech)
+  version: 1.0.0
+  contact:
+    name: Lwena Adam
+    url: https://lwena.techwareafrica.tech
+servers:
+  - url: https://{project_ref}.supabase.co/functions/v1/sms-api
+    description: Production Supabase Edge Function Base URL
+    variables:
+      project_ref:
+        default: kzjgdeqfmxkmpmadtbpb
+        description: Your Supabase Project Reference ID
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /send:
+    post:
+      summary: Send Single SMS
+      description: Queues a single SMS message for delivery via the configured tenant delivery channel (native Android SIM or QuickSMS provider).
+      operationId: sendSingleSms
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendSingleSmsRequest'
+      responses:
+        '200':
+          description: SMS queued successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendSingleSmsResponse'
+        '400':
+          description: Bad request (validation error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication failed (missing or invalid API key)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded (100 req/min)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /bulk:
+    post:
+      summary: Send Bulk SMS
+      description: Queues an identical SMS message to multiple recipients (up to 1,000 numbers per request).
+      operationId: sendBulkSms
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendBulkSmsRequest'
+      responses:
+        '200':
+          description: Bulk SMS requests queued successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendBulkSmsResponse'
+        '400':
+          description: Validation error or recipient limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /status/{request_id}:
+    get:
+      summary: Check Request Status
+      description: Retrieves the current status, delivery timestamp, and error details of a specific queued SMS request.
+      operationId: checkSmsStatus
+      parameters:
+        - name: request_id
+          in: path
+          required: true
+          description: Unique UUID identifier of the SMS request
+          schema:
+            type: string
+            format: uuid
+            example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: SMS status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmsStatusResponse'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: SMS request not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /docs:
+    get:
+      summary: API Documentation Manifest
+      description: Returns service metadata and API configuration in JSON format.
+      operationId: getDocsManifest
+      responses:
+        '200':
+          description: Documentation manifest
+          content:
+            application/json:
+              schema:
+                type: object
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: "API Key obtained from SMS Gateway Pro Settings -> API Integration (e.g., sgw_...)"
+
+  schemas:
+    SendSingleSmsRequest:
+      type: object
+      required:
+        - phone_number
+        - message
+      properties:
+        phone_number:
+          type: string
+          description: Recipient phone number in international E.164 format
+          example: "+255683274343"
+        message:
+          type: string
+          description: SMS message text content
+          example: "Hello from API!"
+        external_id:
+          type: string
+          description: Optional client tracking or reference ID
+          example: "order-123"
+        priority:
+          type: integer
+          default: 0
+          description: Priority level (higher value = processed first)
+          example: 0
+        scheduled_at:
+          type: string
+          format: date-time
+          description: Optional future delivery time in ISO 8601 format
+          example: "2026-12-25T10:00:00Z"
+        metadata:
+          type: object
+          description: Key-value metadata stored alongside the request
+          example:
+            order_id: 12345
+            customer_name: "John Doe"
+
+    SendSingleSmsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        request_id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        status:
+          type: string
+          enum: [pending, processing, sent, failed, cancelled]
+          example: "pending"
+        message:
+          type: string
+          example: "SMS request queued successfully"
+
+    SendBulkSmsRequest:
+      type: object
+      required:
+        - phone_numbers
+        - message
+      properties:
+        phone_numbers:
+          type: array
+          items:
+            type: string
+            example: "+255683274343"
+          description: List of recipient phone numbers (max 1000)
+        message:
+          type: string
+          example: "Hello everyone!"
+        external_id:
+          type: string
+          example: "campaign-456"
+        priority:
+          type: integer
+          default: 0
+          example: 0
+        scheduled_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+
+    SendBulkSmsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        request_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          example:
+            - "550e8400-e29b-41d4-a716-446655440000"
+            - "550e8400-e29b-41d4-a716-446655440001"
+        count:
+          type: integer
+          example: 2
+        status:
+          type: string
+          example: "pending"
+        message:
+          type: string
+          example: "2 SMS requests queued successfully"
+
+    SmsStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        request_id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        phone_number:
+          type: string
+          example: "+255683274343"
+        status:
+          type: string
+          enum: [pending, processing, sent, failed, cancelled]
+          example: "sent"
+        external_id:
+          type: string
+          nullable: true
+          example: "order-123"
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-10-15T10:00:00Z"
+        processed_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2026-10-15T10:00:05Z"
+        error_message:
+          type: string
+          nullable: true
+          example: null
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Missing API key"

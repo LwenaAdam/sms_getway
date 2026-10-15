@@ -4,6 +4,12 @@
 
 The SMS Gateway API allows external systems to send SMS messages through your SMS Gateway Pro application. Messages are queued in Supabase and processed by the mobile app.
 
+> [!TIP]
+> **Interactive OpenAPI 3.0 (Swagger) Specification Available**:
+> You can import or view the complete machine-readable specification in [openapi.yaml](openapi.yaml) to generate client SDKs or test requests interactively.
+> 
+> **Maintainer Portfolio**: [lwena.techwareafrica.tech](https://lwena.techwareafrica.tech) | **GitHub**: [@LwenaAdam](https://github.com/LwenaAdam)
+
 ## Base URL
 
 ```

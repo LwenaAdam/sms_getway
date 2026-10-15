@@ -7,7 +7,8 @@ A production-ready, enterprise-grade SMS gateway application for bulk messaging 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-3.24.5-02569B?logo=flutter)](https://flutter.dev)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL_15-3ECF8E?logo=supabase)](https://supabase.com)
-[![Version](https://img.shields.io/badge/Version-1.0.0-brightgreen)](https://github.com/LWENA27/sms_getway/releases)
+[![Version](https://img.shields.io/badge/Version-1.0.0-brightgreen)](https://github.com/LwenaAdam/sms_getway/releases)
+[![OpenAPI](https://img.shields.io/badge/OpenAPI-3.0.3-brightgreen?logo=openapi-initiative)](openapi.yaml)
 
 ---
 
@@ -15,6 +16,8 @@ A production-ready, enterprise-grade SMS gateway application for bulk messaging 
 
 | Documentation | Purpose |
 |---------------|---------|
+| **[📡 API Documentation](API_DOCUMENTATION.md)** | REST API integration guide |
+| **[📑 OpenAPI Spec](openapi.yaml)** | Interactive OpenAPI 3.0 (Swagger) specification |
 | **[🗄️ Database & Architecture](SUPABASE.md)** | Multi-tenant database schema and architecture |
 | **[🚀 Features & Roadmap](ROADMAP.md)** | Current features and future plans |
 | **[📡 API Documentation](API_DOCUMENTATION.md)** | REST API integration guide |
@@ -1195,10 +1198,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 ## 👨‍💻 Author
-
-**Lwena TechWareAfrica**
-
-- GitHub: [@LWENA27](https://github.com/LWENA27)
+ 
+- **Lwena Adam Samson** (CEO & Lead Engineer, TechWare Africa)
+- GitHub: [@LwenaAdam](https://github.com/LwenaAdam)
+- Portfolio: [lwena.techwareafrica.tech](https://lwena.techwareafrica.tech)
+- Website: [techwareafrica.tech](https://techwareafrica.tech)
 
 ---
 
@@ -1210,4 +1214,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-Made with ❤️ by Lwena TechWareAfrica
+Made with ❤️ by Lwena Adam Samson (@TechWare Africa)

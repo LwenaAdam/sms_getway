@@ -101,13 +101,25 @@ All app configuration in one place:
 
 ```dart
 class AppConstants {
-  // Supabase
-  static const String supabaseUrl = 'https://kzjgdeqfmxkmpmadtbpb.supabase.co';
-  static const String supabaseAnonKey = 'eyJ...';
+  // Supabase (Injected via --dart-define or fallback in constants.dart)
+  static const String supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: 'https://kzjgdeqfmxkmpmadtbpb.supabase.co',
+  );
+  static const String supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue: 'YOUR_SUPABASE_ANON_KEY',
+  );
   
   // App
   static const String appName = 'SMS Gateway Pro';
   static const String appVersion = '1.0.0';
+```
+
+> [!NOTE]
+> See [.env.example](../.env.example) for recommended environment variable patterns when building or running in CI/CD.
+
+```dart
   
   // Rate Limiting
   static const int maxSmsPerMinute = 30;
@@ -562,8 +574,8 @@ AND user_id = 'your-user-id';
 // ✅ Use environment variables
 const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 
-// ❌ Don't commit real keys
-const supabaseAnonKey = 'eyJ...'; // Already in constants.dart
+// ❌ Don't commit real production keys in repository code
+const supabaseAnonKey = 'your_real_key_here';
 ```
 
 ### 3. Validate User Input
