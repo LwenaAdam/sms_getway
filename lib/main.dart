@@ -378,6 +378,27 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ],
             ),
+            const SizedBox(height: AppTheme.paddingLarge),
+            const Divider(),
+            const SizedBox(height: AppTheme.paddingSmall),
+            // Direct API Documentation Access Button
+            TextButton.icon(
+              onPressed: () async {
+                if (kIsWeb) {
+                  final uri = Uri.parse('/api-docs.html');
+                  await launchUrl(uri);
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ApiSettingsScreen(),
+                    ),
+                  );
+                }
+              },
+              icon: const Icon(Icons.menu_book, size: 18),
+              label: const Text('View Developer API Documentation'),
+            ),
           ],
         ),
       ),

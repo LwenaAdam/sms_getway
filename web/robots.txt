@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /api-docs
+Allow: /api-docs.html
+Allow: /openapi.yaml
+
+Sitemap: https://smsgetway.techwareafrica.tech/sitemap.xml
