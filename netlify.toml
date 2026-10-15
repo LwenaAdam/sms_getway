@@ -5,11 +5,8 @@
 # Netlify's automatic builds are disabled - GitHub Actions deploys directly via API
 
 [build]
-  # This should never run - GitHub Actions deploys directly via API
   command = "exit 0"
   publish = "build/web"
-  # Ignore all Git commits - GitHub Actions handles deployment
-  ignore = "exit 0"
 
 # API Documentation route
 [[redirects]]
