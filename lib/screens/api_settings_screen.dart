@@ -142,45 +142,70 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen>
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.amber.shade100,
+              color: Theme.of(context).colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.amber),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.warning, color: Colors.amber),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Save this key - it won\'t be shown again!',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    Icon(
+                      Icons.key,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Save this key - it won\'t be shown again!',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                    ),
                     IconButton(
-                      icon: const Icon(Icons.close, size: 18),
+                      icon: Icon(
+                        Icons.close,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
                       onPressed: () => setState(() => _newKeyRaw = null),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4),
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: Theme.of(context).dividerColor,
+                    ),
                   ),
                   child: Row(
                     children: [
                       Expanded(
-                        child: Text(
+                        child: SelectableText(
                           _newKeyRaw!,
-                          style: const TextStyle(fontFamily: 'monospace'),
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.copy),
+                        icon: Icon(
+                          Icons.copy,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        tooltip: 'Copy key',
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: _newKeyRaw!));
                           _showSuccess('Key copied to clipboard');
@@ -830,25 +855,37 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen>
 
           // Rate limits
           Card(
-            color: Colors.blue[50],
-            child: const Padding(
-              padding: EdgeInsets.all(16),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.info_outline, color: Colors.blue),
-                      SizedBox(width: 8),
+                      Icon(
+                        Icons.info_outline,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
                       Text(
                         'Rate Limits',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 8),
-                  Text('• 100 requests per minute per API key'),
-                  Text('• Maximum 1000 recipients per bulk request'),
+                  const SizedBox(height: 8),
+                  Text(
+                    '• 100 requests per minute per API key',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  ),
+                  Text(
+                    '• Maximum 1000 recipients per bulk request',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  ),
                 ],
               ),
             ),
