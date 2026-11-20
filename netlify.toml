@@ -8,6 +8,21 @@
   command = "exit 0"
   publish = "build/web"
 
+# Proxy /api requests to Supabase Edge Function
+[[redirects]]
+  from = "/api/*"
+  to = "https://kzjgdeqfmxkmpmadtbpb.supabase.co/functions/v1/sms-api/:splat"
+  status = 200
+  force = true
+  headers = {X-Forwarded-Host = "smsgetway.techware.africa"}
+
+[[redirects]]
+  from = "/api"
+  to = "https://kzjgdeqfmxkmpmadtbpb.supabase.co/functions/v1/sms-api"
+  status = 200
+  force = true
+  headers = {X-Forwarded-Host = "smsgetway.techware.africa"}
+
 # API Documentation route
 [[redirects]]
   from = "/api-docs"
