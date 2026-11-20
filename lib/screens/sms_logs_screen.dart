@@ -209,7 +209,7 @@ class _SmsLogsScreenState extends State<SmsLogsScreen> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: _getStatusColor(log.status)
-                                        .withOpacity(0.1),
+                                        .withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(

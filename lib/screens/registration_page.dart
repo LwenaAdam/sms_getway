@@ -47,7 +47,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                   width: 90,
                   height: 90,
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -119,10 +119,10 @@ class _RegistrationPageState extends State<RegistrationPage> {
                 Container(
                   padding: const EdgeInsets.all(AppTheme.paddingMedium),
                   decoration: BoxDecoration(
-                    color: AppTheme.errorColor.withOpacity(0.08),
+                    color: AppTheme.errorColor.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                     border:
-                        Border.all(color: AppTheme.errorColor.withOpacity(0.6)),
+                        Border.all(color: AppTheme.errorColor.withValues(alpha: 0.6)),
                   ),
                   child: Text(
                     errorMessage!,
@@ -138,9 +138,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
                 Container(
                   padding: const EdgeInsets.all(AppTheme.paddingMedium),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.08),
+                    color: Colors.green.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                    border: Border.all(color: Colors.green.withOpacity(0.6)),
+                    border: Border.all(color: Colors.green.withValues(alpha: 0.6)),
                   ),
                   child: Text(
                     successMessage!,

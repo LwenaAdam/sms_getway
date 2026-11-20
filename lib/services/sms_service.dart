@@ -242,7 +242,10 @@ class SmsService {
         createdAt: DateTime.now(),
       );
 
-      await supabase.from(AppConstants.smsLogsTable).insert(smsLog.toJson());
+      await supabase
+          .schema('sms_gateway')
+          .from('sms_logs')
+          .insert(smsLog.toJson());
 
       debugPrint('📝 SMS logged to database');
     } catch (e) {

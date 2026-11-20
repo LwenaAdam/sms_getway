@@ -15,6 +15,12 @@ class AppConstants {
   static const String supabaseUrl = String.fromEnvironment('SUPABASE_URL');
   static const String supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
+  // Custom API Base Domain (routes client requests through domain rather than raw Supabase URL)
+  static const String apiBaseDomain = String.fromEnvironment(
+    'API_BASE_DOMAIN',
+    defaultValue: 'https://smsgetway.techware.africa',
+  );
+
   // ===== APP CONFIGURATION =====
   static const String appName = 'SMS Gateway Pro';
   static const String appVersion = '1.0.0';

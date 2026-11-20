@@ -163,7 +163,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 20,
                       spreadRadius: 5,
                     ),
@@ -266,7 +266,7 @@ class _LoginPageState extends State<LoginPage> {
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -318,7 +318,7 @@ class _LoginPageState extends State<LoginPage> {
               Container(
                 padding: const EdgeInsets.all(AppTheme.paddingMedium),
                 decoration: BoxDecoration(
-                  color: AppTheme.errorColor.withOpacity(0.1),
+                  color: AppTheme.errorColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                   border: Border.all(color: AppTheme.errorColor),
                 ),

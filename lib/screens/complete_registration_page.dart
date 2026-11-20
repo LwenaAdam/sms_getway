@@ -405,7 +405,7 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
     return Container(
       padding: const EdgeInsets.all(AppTheme.paddingMedium),
       decoration: BoxDecoration(
-        color: AppTheme.errorColor.withOpacity(0.1),
+        color: AppTheme.errorColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
         border: Border.all(color: AppTheme.errorColor),
       ),

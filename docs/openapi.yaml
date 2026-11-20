@@ -9,14 +9,16 @@ info:
     - Developer: Lwena Adam Samson
     - Portfolio: [lwena.techwareafrica.tech](https://lwena.techwareafrica.tech)
     - GitHub: [LwenaAdam](https://github.com/LwenaAdam)
-    - Organization: [TechWare Africa](https://techwareafrica.tech)
+    - Organization: [TechWare Africa](https://techware.africa)
   version: 1.0.0
   contact:
     name: Lwena Adam
-    url: https://lwena.techwareafrica.tech
+    url: https://techware.africa
 servers:
+  - url: https://smsgetway.techware.africa/api
+    description: Production Gateway Domain (Recommended for client requests)
   - url: https://{project_ref}.supabase.co/functions/v1/sms-api
-    description: Production Supabase Edge Function Base URL
+    description: Direct Supabase Edge Function Base URL (Fallback)
     variables:
       project_ref:
         default: kzjgdeqfmxkmpmadtbpb

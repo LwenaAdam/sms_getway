@@ -223,7 +223,7 @@ class _DuplicateContactsScreenState extends State<DuplicateContactsScreen> {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -260,9 +260,9 @@ class _DuplicateContactsScreenState extends State<DuplicateContactsScreen> {
           margin: const EdgeInsets.all(AppTheme.paddingMedium),
           padding: const EdgeInsets.all(AppTheme.paddingMedium),
           decoration: BoxDecoration(
-            color: Colors.orange.withOpacity(0.1),
+            color: Colors.orange.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.orange.withOpacity(0.3)),
+            border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
           ),
           child: Row(
             children: [
@@ -315,7 +315,7 @@ class _DuplicateContactsScreenState extends State<DuplicateContactsScreen> {
       ),
       child: ExpansionTile(
         leading: CircleAvatar(
-          backgroundColor: Colors.orange.withOpacity(0.2),
+          backgroundColor: Colors.orange.withValues(alpha: 0.2),
           child: Text(
             '${group.contacts.length}',
             style: const TextStyle(
@@ -371,7 +371,7 @@ class _DuplicateContactsScreenState extends State<DuplicateContactsScreen> {
         ),
         borderRadius: BorderRadius.circular(8),
         color: isSelected
-            ? AppTheme.primaryColor.withOpacity(0.1)
+            ? AppTheme.primaryColor.withValues(alpha: 0.1)
             : Colors.transparent,
       ),
       child: RadioListTile<String>(

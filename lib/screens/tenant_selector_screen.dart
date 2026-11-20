@@ -120,7 +120,7 @@ class _TenantSelectorScreenState extends State<TenantSelectorScreen> {
                 Container(
                   padding: const EdgeInsets.all(AppTheme.paddingLarge),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                   ),
                   child: Row(
@@ -128,7 +128,7 @@ class _TenantSelectorScreenState extends State<TenantSelectorScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(0.2),
+                          color: AppTheme.primaryColor.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -205,7 +205,7 @@ class _TenantSelectorScreenState extends State<TenantSelectorScreen> {
                             borderRadius:
                                 BorderRadius.circular(AppTheme.radiusMedium),
                             color: isSelected
-                                ? AppTheme.primaryColor.withOpacity(0.1)
+                                ? AppTheme.primaryColor.withValues(alpha: 0.1)
                                 : (isDark ? Colors.grey[850] : Colors.white),
                           ),
                           child: Row(
@@ -215,7 +215,7 @@ class _TenantSelectorScreenState extends State<TenantSelectorScreen> {
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: AppTheme.primaryColor.withOpacity(0.2),
+                                  color: AppTheme.primaryColor.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Center(
@@ -253,7 +253,7 @@ class _TenantSelectorScreenState extends State<TenantSelectorScreen> {
                                       ),
                                       decoration: BoxDecoration(
                                         color: _getRoleColor(tenant.role)
-                                            .withOpacity(0.1),
+                                            .withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(

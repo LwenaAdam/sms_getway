@@ -8,13 +8,17 @@ The SMS Gateway API allows external systems to send SMS messages through your SM
 > **Interactive OpenAPI 3.0 (Swagger) Specification Available**:
 > You can import or view the complete machine-readable specification in [openapi.yaml](openapi.yaml) to generate client SDKs or test requests interactively.
 > 
-> **Maintainer Portfolio**: [lwena.techwareafrica.tech](https://lwena.techwareafrica.tech) | **GitHub**: [@LwenaAdam](https://github.com/LwenaAdam)
+> **Maintainer Portfolio**: [techware.africa](https://techware.africa) | **GitHub**: [@LwenaAdam](https://github.com/LwenaAdam)
 
 ## Base URL
 
+Clients and external systems should route requests through the official product domain rather than invoking Supabase directly:
+
 ```
-https://[YOUR_SUPABASE_PROJECT_REF].supabase.co/functions/v1/sms-api
+https://smsgetway.techware.africa/api
 ```
+
+*(Direct fallback: `https://[YOUR_SUPABASE_PROJECT_REF].supabase.co/functions/v1/sms-api`)*
 
 ## Authentication
 
@@ -193,7 +197,7 @@ All errors return a JSON response with `success: false`:
 
 ```bash
 # Send single SMS
-curl -X POST "https://YOUR_PROJECT.supabase.co/functions/v1/sms-api/send" \
+curl -X POST "https://smsgetway.techware.africa/api/send" \
   -H "Content-Type: application/json" \
   -H "x-api-key: sgw_your_api_key_here" \
   -d '{
@@ -202,7 +206,7 @@ curl -X POST "https://YOUR_PROJECT.supabase.co/functions/v1/sms-api/send" \
   }'
 
 # Send bulk SMS
-curl -X POST "https://YOUR_PROJECT.supabase.co/functions/v1/sms-api/bulk" \
+curl -X POST "https://smsgetway.techware.africa/api/bulk" \
   -H "Content-Type: application/json" \
   -H "x-api-key: sgw_your_api_key_here" \
   -d '{
@@ -211,7 +215,7 @@ curl -X POST "https://YOUR_PROJECT.supabase.co/functions/v1/sms-api/bulk" \
   }'
 
 # Check status
-curl -X GET "https://YOUR_PROJECT.supabase.co/functions/v1/sms-api/status/REQUEST_ID" \
+curl -X GET "https://smsgetway.techware.africa/api/status/REQUEST_ID" \
   -H "x-api-key: sgw_your_api_key_here"
 ```
 
@@ -220,7 +224,7 @@ curl -X GET "https://YOUR_PROJECT.supabase.co/functions/v1/sms-api/status/REQUES
 ```javascript
 const axios = require('axios');
 
-const API_URL = 'https://YOUR_PROJECT.supabase.co/functions/v1/sms-api';
+const API_URL = 'https://smsgetway.techware.africa/api';
 const API_KEY = 'sgw_your_api_key_here';
 
 // Send single SMS
@@ -257,7 +261,7 @@ async function sendBulkSms(phoneNumbers, message) {
 ```python
 import requests
 
-API_URL = 'https://YOUR_PROJECT.supabase.co/functions/v1/sms-api'
+API_URL = 'https://smsgetway.techware.africa/api'
 API_KEY = 'sgw_your_api_key_here'
 
 headers = {
@@ -286,7 +290,7 @@ def send_bulk_sms(phone_numbers, message):
 
 ```php
 <?php
-$apiUrl = 'https://YOUR_PROJECT.supabase.co/functions/v1/sms-api';
+$apiUrl = 'https://smsgetway.techware.africa/api';
 $apiKey = 'sgw_your_api_key_here';
 
 function sendSms($phoneNumber, $message) {

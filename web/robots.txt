@@ -4,4 +4,4 @@ Allow: /api-docs
 Allow: /api-docs.html
 Allow: /openapi.yaml
 
-Sitemap: https://smsgetway.techwareafrica.tech/sitemap.xml
+Sitemap: https://smsgetway.techware.africa/sitemap.xml
