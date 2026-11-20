@@ -25,7 +25,6 @@ class MarketingService {
       });
       return result == true;
     } catch (e) {
-      print('❌ Error enabling marketing: $e');
       return false;
     }
   }
@@ -36,7 +35,6 @@ class MarketingService {
       final result = await _channel.invokeMethod('disableMarketing');
       return result == true;
     } catch (e) {
-      print('❌ Error disabling marketing: $e');
       return false;
     }
   }
@@ -47,7 +45,6 @@ class MarketingService {
       final result = await _channel.invokeMethod('isMarketingEnabled');
       return result == true;
     } catch (e) {
-      print('❌ Error checking marketing status: $e');
       return false;
     }
   }
@@ -58,7 +55,6 @@ class MarketingService {
       final result = await _channel.invokeMethod('getMarketingSettings');
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('❌ Error getting settings: $e');
       return null;
     }
   }
@@ -71,7 +67,6 @@ class MarketingService {
       });
       return result == true;
     } catch (e) {
-      print('❌ Error setting daily limit: $e');
       return false;
     }
   }
@@ -82,7 +77,6 @@ class MarketingService {
       final result = await _channel.invokeMethod('resetDailyCounter');
       return result == true;
     } catch (e) {
-      print('❌ Error resetting counter: $e');
       return false;
     }
   }
@@ -95,7 +89,6 @@ class MarketingService {
       });
       return Map<String, int>.from(result);
     } catch (e) {
-      print('❌ Error getting campaign stats: $e');
       return null;
     }
   }
@@ -109,7 +102,6 @@ class MarketingService {
       });
       return result == true;
     } catch (e) {
-      print('❌ Error checking phone eligibility: $e');
       return false;
     }
   }
@@ -123,7 +115,6 @@ class MarketingService {
       });
       return result?.toString();
     } catch (e) {
-      print('❌ Error getting block reason: $e');
       return null;
     }
   }
@@ -137,7 +128,6 @@ class MarketingService {
       });
       return result ?? 0;
     } catch (e) {
-      print('❌ Error getting quota: $e');
       return 0;
     }
   }
@@ -151,7 +141,6 @@ class MarketingService {
       });
       return result == true;
     } catch (e) {
-      print('❌ Error adding opt-out: $e');
       return false;
     }
   }
@@ -165,7 +154,6 @@ class MarketingService {
       });
       return result == true;
     } catch (e) {
-      print('❌ Error removing opt-out: $e');
       return false;
     }
   }
@@ -176,7 +164,6 @@ class MarketingService {
       final result = await _channel.invokeMethod('forceCheckNow');
       return result == true;
     } catch (e) {
-      print('❌ Error forcing check: $e');
       return false;
     }
   }

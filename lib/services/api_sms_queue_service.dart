@@ -9,6 +9,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
+import '../core/constants.dart';
 import '../core/tenant_service.dart';
 import 'sms_service.dart';
 
@@ -573,7 +574,13 @@ class ApiSmsQueueService extends ChangeNotifier {
 
   /// Get API endpoint URL
   String getApiEndpoint() {
-    // Use the Supabase project URL to construct the edge function URL
+    // If a custom API base domain is configured, use it instead of direct Supabase edge URL
+    if (AppConstants.apiBaseDomain.isNotEmpty) {
+      final domain = AppConstants.apiBaseDomain.replaceAll(RegExp(r'/+$'), '');
+      return '$domain/api';
+    }
+
+    // Fallback: construct edge function URL from Supabase project URL
     final supabaseUrl = _supabase.rest.url;
     final projectRef = Uri.parse(supabaseUrl).host.split('.').first;
     return 'https://$projectRef.supabase.co/functions/v1/sms-api';
