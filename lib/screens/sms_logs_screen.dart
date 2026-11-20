@@ -23,23 +23,19 @@ class _SmsLogsScreenState extends State<SmsLogsScreen> {
 
   void _loadLogs() async {
     try {
-      print('📱 Loading SMS logs from local database');
       // Load from local database (offline-first)
       final localLogs = await LocalDataService().getSmsLogs(
         statusFilter: filterStatus == 'all' ? null : filterStatus,
       );
 
-      print('✅ Loaded ${localLogs.length} logs');
 
       if (mounted) {
         setState(() {
           logs = localLogs;
           isLoading = false;
         });
-        print('✅ UI updated with ${logs.length} logs');
       }
     } catch (e) {
-      print('❌ Error loading logs: $e');
       if (mounted) {
         setState(() => isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
