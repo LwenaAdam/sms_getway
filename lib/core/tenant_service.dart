@@ -233,14 +233,18 @@ class TenantService extends ChangeNotifier {
         'updated_at': DateTime.now().toIso8601String(),
       }, onConflict: 'id');
 
-      await Supabase.instance.client
-          .schema('sms_gateway')
-          .from('tenant_members')
-          .upsert({
-        'tenant_id': tenantId,
-        'user_id': user.id,
-        'role': _currentTenant?.role ?? 'member',
-      }, onConflict: 'tenant_id,user_id');
+      try {
+        await Supabase.instance.client
+            .schema('sms_gateway')
+            .from('tenant_members')
+            .upsert({
+          'tenant_id': tenantId,
+          'user_id': user.id,
+          'role': _currentTenant?.role ?? 'member',
+        }, onConflict: 'tenant_id,user_id');
+      } catch (e) {
+        debugPrint('⚠️ Non-blocking warning upserting tenant_members: $e');
+      }
     } catch (e) {
       debugPrint('❌ Error ensuring user profile: $e');
     }
@@ -299,11 +303,15 @@ class TenantService extends ChangeNotifier {
       }, onConflict: 'id');
 
       // 4. Create membership in sms_gateway.tenant_members
-      await supabase.schema('sms_gateway').from('tenant_members').upsert({
-        'tenant_id': newTenantId,
-        'user_id': user.id,
-        'role': 'owner',
-      }, onConflict: 'tenant_id,user_id');
+      try {
+        await supabase.schema('sms_gateway').from('tenant_members').upsert({
+          'tenant_id': newTenantId,
+          'user_id': user.id,
+          'role': 'owner',
+        }, onConflict: 'tenant_id,user_id');
+      } catch (e) {
+        debugPrint('⚠️ Non-blocking warning upserting tenant_members in autoProvision: $e');
+      }
 
       // 5. Initialize user settings
       try {

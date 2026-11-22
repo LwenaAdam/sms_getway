@@ -38,6 +38,8 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
   String selectedPlan = 'basic';
 
   bool isLoading = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   String? errorMessage;
 
   @override
@@ -207,11 +209,23 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
         const SizedBox(height: AppTheme.paddingMedium),
         TextFormField(
           controller: passwordController,
-          obscureText: true,
-          decoration: const InputDecoration(
+          obscureText: _obscurePassword,
+          decoration: InputDecoration(
             labelText: 'Password',
-            prefixIcon: Icon(Icons.lock),
+            prefixIcon: const Icon(Icons.lock),
             hintText: 'Minimum 8 characters',
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                color: Colors.grey[600],
+              ),
+              tooltip: _obscurePassword ? 'Show password' : 'Hide password',
+              onPressed: () {
+                setState(() {
+                  _obscurePassword = !_obscurePassword;
+                });
+              },
+            ),
           ),
           validator: (v) {
             if (v == null || v.isEmpty) return 'Password is required';
@@ -222,10 +236,25 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
         const SizedBox(height: AppTheme.paddingMedium),
         TextFormField(
           controller: confirmPasswordController,
-          obscureText: true,
-          decoration: const InputDecoration(
+          obscureText: _obscureConfirmPassword,
+          decoration: InputDecoration(
             labelText: 'Confirm Password',
-            prefixIcon: Icon(Icons.lock_outline),
+            prefixIcon: const Icon(Icons.lock_outline),
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscureConfirmPassword
+                    ? Icons.visibility_off
+                    : Icons.visibility,
+                color: Colors.grey[600],
+              ),
+              tooltip:
+                  _obscureConfirmPassword ? 'Show password' : 'Hide password',
+              onPressed: () {
+                setState(() {
+                  _obscureConfirmPassword = !_obscureConfirmPassword;
+                });
+              },
+            ),
           ),
           validator: (v) {
             if (v == null || v.isEmpty) return 'Please confirm password';
@@ -402,23 +431,55 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
   }
 
   Widget _buildErrorMessage() {
+    final isExistingAccount = errorMessage?.contains('already exists') == true ||
+        errorMessage?.contains('already registered') == true;
+
     return Container(
-      padding: const EdgeInsets.all(AppTheme.paddingMedium),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppTheme.errorColor.withValues(alpha: 0.1),
+        color: AppTheme.errorColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-        border: Border.all(color: AppTheme.errorColor),
+        border: Border.all(color: AppTheme.errorColor.withValues(alpha: 0.3)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.error_outline, color: AppTheme.errorColor),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              errorMessage!,
-              style: const TextStyle(color: AppTheme.errorColor),
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.error_outline,
+                  color: AppTheme.errorColor, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  errorMessage!,
+                  style: const TextStyle(
+                    color: AppTheme.errorColor,
+                    fontSize: 13,
+                    height: 1.4,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
           ),
+          if (isExistingAccount) ...[
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                icon: const Icon(Icons.login, size: 16),
+                label: const Text('Go to Login Screen'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.primaryColor,
+                  visualDensity: VisualDensity.compact,
+                ),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -487,20 +548,57 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
 
     try {
       final supabase = Supabase.instance.client;
+      final email = emailController.text.trim();
+      final password = passwordController.text;
 
-      // STEP 1: Create auth.users account
-      debugPrint('📝 Creating authentication account...');
-      final authResponse = await supabase.auth.signUp(
-        email: emailController.text.trim(),
-        password: passwordController.text,
-      );
+      // STEP 1: Create or fetch auth.users account
+      debugPrint('📝 Checking authentication account...');
+      String userId;
+      final currentAuthUser = supabase.auth.currentUser;
 
-      if (authResponse.user == null) {
-        throw Exception('Failed to create account');
+      if (currentAuthUser != null && currentAuthUser.email == email) {
+        userId = currentAuthUser.id;
+        debugPrint('✅ Using active session user: $userId');
+      } else {
+        try {
+          final authResponse = await supabase.auth.signUp(
+            email: email,
+            password: password,
+          );
+
+          if (authResponse.user == null) {
+            throw Exception('Failed to create account');
+          }
+
+          userId = authResponse.user!.id;
+          debugPrint('✅ Auth account created: $userId');
+        } on AuthApiException catch (authEx) {
+          final msg = authEx.message.toLowerCase();
+          if (authEx.code == 'user_already_exists' ||
+              authEx.statusCode == '422' ||
+              msg.contains('already registered') ||
+              msg.contains('user already exists')) {
+            // Attempt to sign in with the provided password to finish setup
+            try {
+              final signInResponse = await supabase.auth.signInWithPassword(
+                email: email,
+                password: password,
+              );
+              if (signInResponse.user == null) {
+                throw Exception(
+                    'An account with email "$email" already exists. Please log in or verify your password.');
+              }
+              userId = signInResponse.user!.id;
+              debugPrint('✅ Signed in existing user to complete registration: $userId');
+            } catch (_) {
+              throw Exception(
+                  'An account with email "$email" already exists. Please enter your existing password to finish setting up your workspace, or go to the Login screen.');
+            }
+          } else {
+            rethrow;
+          }
+        }
       }
-
-      final userId = authResponse.user!.id;
-      debugPrint('✅ Auth account created: $userId');
 
       // STEP 2: Create client (top-level organization)
       debugPrint('🏢 Creating client organization...');
@@ -622,8 +720,23 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
       Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (e) {
       debugPrint('❌ Registration error: $e');
+      String clean = e.toString();
+      clean = clean.replaceAll(
+          RegExp(r'^(Exception|AuthException|AuthApiException|AuthUnknownException):\s*'),
+          '');
+      clean = clean.replaceAll(
+          RegExp(r'AuthApiException\(message:\s*([^,]+).*?\)', dotAll: true),
+          r'$1');
+      clean = clean.replaceAll(
+          RegExp(r'AuthUnknownException\(message:\s*([^,]+).*?\)', dotAll: true),
+          r'$1');
+      if (clean.toLowerCase().contains('already registered') ||
+          clean.toLowerCase().contains('user_already_exists')) {
+        clean =
+            'An account with this email already exists. Please log in or enter your existing account password.';
+      }
       setState(() {
-        errorMessage = 'Registration failed: ${e.toString()}';
+        errorMessage = clean;
       });
     } finally {
       if (mounted) {

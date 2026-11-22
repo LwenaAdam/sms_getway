@@ -295,7 +295,60 @@ class _LoginPageState extends State<LoginPage> {
   final passwordController = TextEditingController();
   bool isLoading = false;
   bool isGoogleLoading = false;
+  bool _obscurePassword = true;
   String? errorMessage;
+
+  String _formatAuthError(dynamic e) {
+    if (e == null) return 'An error occurred during authentication.';
+
+    if (e is AuthException) {
+      final msg = e.message.toLowerCase();
+      if (msg.contains('invalid login credentials') ||
+          msg.contains('invalid_credentials')) {
+        return 'Incorrect email or password. Please verify and try again.';
+      }
+      if (msg.contains('email not confirmed')) {
+        return 'Your email has not been confirmed yet. Please check your inbox for the confirmation link.';
+      }
+      if (e.statusCode == '404' || msg.contains('404')) {
+        return 'Authentication service is unreachable. Please verify your connection.';
+      }
+      if (e.statusCode == '422' || msg.contains('already registered')) {
+        return 'An account with this email already exists.';
+      }
+      return e.message;
+    }
+
+    final str = e.toString().toLowerCase();
+    if (str.contains('invalid login credentials') ||
+        str.contains('invalid_credentials')) {
+      return 'Incorrect email or password. Please verify and try again.';
+    }
+    if (str.contains('404') ||
+        str.contains('empty response with status code 404')) {
+      return 'Authentication service unreachable (404). Please check your connection or restart the app.';
+    }
+    if (str.contains('network') ||
+        str.contains('failed host lookup') ||
+        str.contains('socketexception')) {
+      return 'Network connection error. Please check your internet connection.';
+    }
+    if (str.contains('rate limit') || str.contains('too many requests')) {
+      return 'Too many login attempts. Please wait a moment before trying again.';
+    }
+
+    String clean = e.toString();
+    clean = clean.replaceAll(
+        RegExp(r'^(Exception|AuthException|AuthApiException|AuthUnknownException):\s*'),
+        '');
+    clean = clean.replaceAll(
+        RegExp(r'AuthUnknownException\(message:\s*([^,]+).*?\)', dotAll: true),
+        r'$1');
+    clean = clean.replaceAll(
+        RegExp(r'AuthApiException\(message:\s*([^,]+).*?\)', dotAll: true),
+        r'$1');
+    return clean;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -357,27 +410,51 @@ class _LoginPageState extends State<LoginPage> {
             // Password field
             TextField(
               controller: passwordController,
-              decoration: const InputDecoration(
+              obscureText: _obscurePassword,
+              decoration: InputDecoration(
                 labelText: 'Password',
-                prefixIcon: Icon(Icons.lock),
+                prefixIcon: const Icon(Icons.lock),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    color: Colors.grey[600],
+                  ),
+                  tooltip: _obscurePassword ? 'Show password' : 'Hide password',
+                  onPressed: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
+                ),
               ),
-              obscureText: true,
             ),
             const SizedBox(height: AppTheme.paddingLarge),
             // Error message
             if (errorMessage != null)
               Container(
-                padding: const EdgeInsets.all(AppTheme.paddingMedium),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: AppTheme.errorColor.withValues(alpha: 0.1),
+                  color: AppTheme.errorColor.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                  border: Border.all(color: AppTheme.errorColor),
+                  border: Border.all(
+                      color: AppTheme.errorColor.withValues(alpha: 0.4)),
                 ),
-                child: Text(
-                  errorMessage!,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.errorColor,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.error_outline,
+                        color: AppTheme.errorColor, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        errorMessage!,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppTheme.errorColor,
+                              fontWeight: FontWeight.w500,
+                            ),
                       ),
+                    ),
+                  ],
                 ),
               ),
             if (errorMessage != null)
@@ -513,7 +590,7 @@ class _LoginPageState extends State<LoginPage> {
       debugPrint('❌ Google sign-in error: $e');
       if (mounted) {
         setState(() {
-          errorMessage = 'Google Sign-In failed: ${e.toString()}';
+          errorMessage = _formatAuthError(e);
         });
       }
     } finally {
@@ -594,7 +671,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       setState(() {
-        errorMessage = 'Login failed: ${e.toString()}';
+        errorMessage = _formatAuthError(e);
       });
       debugPrint('❌ Login error: $e');
     } finally {
