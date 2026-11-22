@@ -339,7 +339,8 @@ class _LoginPageState extends State<LoginPage> {
 
     String clean = e.toString();
     clean = clean.replaceAll(
-        RegExp(r'^(Exception|AuthException|AuthApiException|AuthUnknownException):\s*'),
+        RegExp(
+            r'^(Exception|AuthException|AuthApiException|AuthUnknownException):\s*'),
         '');
     clean = clean.replaceAll(
         RegExp(r'AuthUnknownException\(message:\s*([^,]+).*?\)', dotAll: true),
@@ -432,7 +433,8 @@ class _LoginPageState extends State<LoginPage> {
             // Error message
             if (errorMessage != null)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: AppTheme.errorColor.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(AppTheme.radiusMedium),

@@ -431,8 +431,9 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
   }
 
   Widget _buildErrorMessage() {
-    final isExistingAccount = errorMessage?.contains('already exists') == true ||
-        errorMessage?.contains('already registered') == true;
+    final isExistingAccount =
+        errorMessage?.contains('already exists') == true ||
+            errorMessage?.contains('already registered') == true;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -589,7 +590,8 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
                     'An account with email "$email" already exists. Please log in or verify your password.');
               }
               userId = signInResponse.user!.id;
-              debugPrint('✅ Signed in existing user to complete registration: $userId');
+              debugPrint(
+                  '✅ Signed in existing user to complete registration: $userId');
             } catch (_) {
               throw Exception(
                   'An account with email "$email" already exists. Please enter your existing password to finish setting up your workspace, or go to the Login screen.');
@@ -722,13 +724,15 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
       debugPrint('❌ Registration error: $e');
       String clean = e.toString();
       clean = clean.replaceAll(
-          RegExp(r'^(Exception|AuthException|AuthApiException|AuthUnknownException):\s*'),
+          RegExp(
+              r'^(Exception|AuthException|AuthApiException|AuthUnknownException):\s*'),
           '');
       clean = clean.replaceAll(
           RegExp(r'AuthApiException\(message:\s*([^,]+).*?\)', dotAll: true),
           r'$1');
       clean = clean.replaceAll(
-          RegExp(r'AuthUnknownException\(message:\s*([^,]+).*?\)', dotAll: true),
+          RegExp(r'AuthUnknownException\(message:\s*([^,]+).*?\)',
+              dotAll: true),
           r'$1');
       if (clean.toLowerCase().contains('already registered') ||
           clean.toLowerCase().contains('user_already_exists')) {

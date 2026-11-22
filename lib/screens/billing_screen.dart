@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../core/constants.dart';
 import '../core/tenant_service.dart';
 import '../services/palmpesa_service.dart';
 
@@ -184,8 +183,10 @@ class _BillingScreenState extends State<BillingScreen> {
                                   isSubmitting = false;
                                 });
 
-                                if (!mounted) return;
+                                if (!ctx.mounted) return;
                                 Navigator.pop(ctx);
+
+                                if (!mounted) return;
 
                                 if (result.success) {
                                   _showPaymentStatusWaitingDialog(

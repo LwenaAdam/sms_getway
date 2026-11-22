@@ -15,7 +15,6 @@ import 'tenant_selector_screen.dart';
 import 'api_settings_screen.dart';
 import 'marketing_settings_screen.dart';
 import 'billing_screen.dart';
-import '../services/sms_service.dart';
 import '../services/provider_manager_service.dart';
 
 // SMS Channel options
