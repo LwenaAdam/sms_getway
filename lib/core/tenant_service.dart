@@ -245,4 +245,113 @@ class TenantService extends ChangeNotifier {
       debugPrint('❌ Error ensuring user profile: $e');
     }
   }
+
+  /// Automatically provisions a tenant and product access for a newly authenticated social/Google user
+  Future<bool> autoProvisionWorkspaceForUser(User user) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final email = user.email ?? 'user';
+      final metadata = user.userMetadata ?? const {};
+      final rawName = metadata['full_name'] ?? metadata['name'] ?? email.split('@').first;
+      final orgName = "$rawName's Workspace";
+      final orgSlug = '${email.split('@').first.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase()}-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+
+      debugPrint('🚀 Auto-provisioning workspace for user: ${user.id} ($email)');
+
+      // 1. Create client in public.clients (or check if one exists for user)
+      var clientResponse = await supabase
+          .from('clients')
+          .select('id')
+          .eq('owner_id', user.id)
+          .maybeSingle();
+
+      String clientId;
+      if (clientResponse != null && clientResponse['id'] != null) {
+        clientId = clientResponse['id'] as String;
+      } else {
+        final insertedClient = await supabase.from('clients').insert({
+          'name': orgName,
+          'slug': orgSlug,
+          'email': email,
+          'owner_id': user.id,
+          'is_active': true,
+        }).select('id').single();
+        clientId = insertedClient['id'] as String;
+      }
+
+      // 2. Create tenant in sms_gateway.tenants
+      final tenantResponse = await supabase.schema('sms_gateway').from('tenants').insert({
+        'name': orgName,
+        'slug': orgSlug,
+        'client_id': clientId,
+        'status': 'active',
+      }).select('id').single();
+      final newTenantId = tenantResponse['id'] as String;
+
+      // 3. Create user profile in sms_gateway.users
+      await supabase.schema('sms_gateway').from('users').upsert({
+        'id': user.id,
+        'email': email,
+        'name': rawName,
+        'role': 'owner',
+        'tenant_id': newTenantId,
+        'updated_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'id');
+
+      // 4. Create membership in sms_gateway.tenant_members
+      await supabase.schema('sms_gateway').from('tenant_members').upsert({
+        'tenant_id': newTenantId,
+        'user_id': user.id,
+        'role': 'owner',
+      }, onConflict: 'tenant_id,user_id');
+
+      // 5. Initialize user settings
+      try {
+        await supabase.schema('sms_gateway').from('user_settings').insert({
+          'user_id': user.id,
+          'tenant_id': newTenantId,
+          'sms_channel': 'thisPhone',
+          'theme_mode': 'light',
+          'language': 'en',
+        });
+      } catch (_) {}
+
+      // 6. Initialize tenant settings
+      try {
+        await supabase.schema('sms_gateway').from('tenant_settings').insert({
+          'tenant_id': newTenantId,
+          'default_sms_channel': 'thisPhone',
+          'daily_sms_quota': 100,
+          'monthly_sms_quota': 1000,
+          'enable_bulk_sms': true,
+          'plan_type': 'basic',
+        });
+      } catch (_) {}
+
+      // 7. Grant client_product_access
+      try {
+        final productResponse = await supabase
+            .from('products')
+            .select('id')
+            .eq('schema_name', 'sms_gateway')
+            .maybeSingle();
+
+        if (productResponse != null && productResponse['id'] != null) {
+          await supabase.from('client_product_access').upsert({
+            'user_id': user.id,
+            'client_id': clientId,
+            'product_id': productResponse['id'],
+            'tenant_id': newTenantId,
+            'role': 'owner',
+          }, onConflict: 'user_id,tenant_id,product_id');
+        }
+      } catch (_) {}
+
+      debugPrint('✅ Workspace successfully auto-provisioned: $newTenantId');
+      return true;
+    } catch (e) {
+      debugPrint('⚠️ Error auto-provisioning workspace: $e');
+      return false;
+    }
+  }
 }

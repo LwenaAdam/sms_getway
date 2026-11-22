@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -19,6 +20,7 @@ import 'screens/complete_registration_page.dart';
 import 'screens/download_app_banner.dart';
 import 'screens/billing_screen.dart';
 import 'services/provider_manager_service.dart';
+import 'widgets/google_sign_in_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 void main() async {
@@ -90,11 +92,35 @@ class _AuthWrapperState extends State<AuthWrapper> {
   bool _isCheckingTenant = true;
   bool _needsTenantSelection = false;
   List<TenantModel> _tenants = [];
+  StreamSubscription<AuthState>? _authSubscription;
 
   @override
   void initState() {
     super.initState();
     _checkAuthAndTenant();
+
+    // Listen to Supabase auth state changes (e.g. Google OAuth redirect callback)
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      debugPrint('🔔 [AuthWrapper] Auth event: ${data.event}');
+      if (data.event == AuthChangeEvent.signedIn ||
+          data.event == AuthChangeEvent.tokenRefreshed ||
+          data.event == AuthChangeEvent.userUpdated) {
+        _checkAuthAndTenant();
+      } else if (data.event == AuthChangeEvent.signedOut) {
+        if (mounted) {
+          setState(() {
+            _isCheckingTenant = false;
+            _needsTenantSelection = false;
+          });
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _checkAuthAndTenant() async {
@@ -103,48 +129,64 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
     if (session == null) {
       // Not logged in
-      setState(() {
-        _isCheckingTenant = false;
-        _needsTenantSelection = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isCheckingTenant = false;
+          _needsTenantSelection = false;
+        });
+      }
       return;
     }
 
     // User is logged in, check if tenant is already selected
     if (tenantService.hasTenant) {
       // Tenant already selected, proceed to home
-      setState(() {
-        _isCheckingTenant = false;
-        _needsTenantSelection = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isCheckingTenant = false;
+          _needsTenantSelection = false;
+        });
+      }
       return;
     }
 
     // Load tenants for user
-    final hasAccess = await tenantService.loadTenantsForUser(session.user.id);
+    bool hasAccess = await tenantService.loadTenantsForUser(session.user.id);
+
+    // If new user (e.g. via Google OAuth) with no tenant, auto-provision workspace!
+    if (!hasAccess || tenantService.tenantsCount == 0) {
+      final autoCreated = await tenantService.autoProvisionWorkspaceForUser(session.user);
+      if (autoCreated) {
+        hasAccess = await tenantService.loadTenantsForUser(session.user.id);
+      }
+    }
 
     if (!hasAccess || tenantService.tenantsCount == 0) {
       // No access - will show error on home page or redirect to login
-      setState(() {
-        _isCheckingTenant = false;
-        _needsTenantSelection = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isCheckingTenant = false;
+          _needsTenantSelection = false;
+        });
+      }
       return;
     }
 
-    // Check if user needs to pick tenant (2+ tenants)
-    if (tenantService.shouldShowTenantPicker) {
-      setState(() {
-        _tenants = tenantService.tenants;
-        _needsTenantSelection = true;
-        _isCheckingTenant = false;
-      });
-    } else {
-      // Single tenant, already auto-selected
-      setState(() {
-        _isCheckingTenant = false;
-        _needsTenantSelection = false;
-      });
+    if (mounted) {
+      // Check if user needs to pick tenant (2+ tenants)
+      if (tenantService.shouldShowTenantPicker) {
+        setState(() {
+          _tenants = tenantService.tenants;
+          _needsTenantSelection = true;
+          _isCheckingTenant = false;
+        });
+      } else {
+        // Single tenant, already auto-selected
+        setState(() {
+          _isCheckingTenant = false;
+          _needsTenantSelection = false;
+        });
+      }
     }
   }
 
@@ -250,6 +292,7 @@ class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   bool isLoading = false;
+  bool isGoogleLoading = false;
   String? errorMessage;
 
   @override
@@ -341,7 +384,7 @@ class _LoginPageState extends State<LoginPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: isLoading ? null : _login,
+                onPressed: isLoading || isGoogleLoading ? null : _login,
                 child: isLoading
                     ? const SizedBox(
                         height: 20,
@@ -356,6 +399,34 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
             const SizedBox(height: AppTheme.paddingMedium),
+
+            // OR Divider
+            Row(
+              children: [
+                Expanded(child: Divider(color: Colors.grey.shade300)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'OR',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Expanded(child: Divider(color: Colors.grey.shade300)),
+              ],
+            ),
+            const SizedBox(height: AppTheme.paddingMedium),
+
+            // Official Google Sign-In Button
+            GoogleSignInButton(
+              isLoading: isGoogleLoading,
+              onPressed: (isLoading || isGoogleLoading) ? null : _signInWithGoogle,
+            ),
+            const SizedBox(height: AppTheme.paddingLarge),
+
             // Sign up link
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -365,7 +436,7 @@ class _LoginPageState extends State<LoginPage> {
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 GestureDetector(
-                  onTap: isLoading
+                  onTap: isLoading || isGoogleLoading
                       ? null
                       : () {
                           Navigator.of(context).push(
@@ -411,6 +482,42 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  void _signInWithGoogle() async {
+    setState(() {
+      isGoogleLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      const redirectUrl = kIsWeb
+          ? null // in web, null keeps it in current window/domain
+          : 'io.supabase.smsgetway://login-callback';
+
+      debugPrint('🔑 Starting Google OAuth with redirect: $redirectUrl');
+
+      await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: redirectUrl,
+        authScreenLaunchMode: kIsWeb
+            ? LaunchMode.platformDefault
+            : LaunchMode.externalApplication,
+      );
+    } catch (e) {
+      debugPrint('❌ Google sign-in error: $e');
+      if (mounted) {
+        setState(() {
+          errorMessage = 'Google Sign-In failed: ${e.toString()}';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isGoogleLoading = false;
+        });
+      }
+    }
+  }
+
   void _login() async {
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
       setState(() {
@@ -437,8 +544,15 @@ class _LoginPageState extends State<LoginPage> {
 
         // Load tenants for user
         final tenantService = TenantService();
-        final hasAccess =
+        bool hasAccess =
             await tenantService.loadTenantsForUser(response.user!.id);
+
+        if (!hasAccess || tenantService.tenantsCount == 0) {
+          final autoCreated = await tenantService.autoProvisionWorkspaceForUser(response.user!);
+          if (autoCreated) {
+            hasAccess = await tenantService.loadTenantsForUser(response.user!.id);
+          }
+        }
 
         if (!hasAccess || tenantService.tenantsCount == 0) {
           setState(() {

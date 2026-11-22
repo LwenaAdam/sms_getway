@@ -111,7 +111,8 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Native SIM SMS is only available on Android. Change channel to Swala SMS or QuickSMS in Settings.'),
+            content: Text(
+                'Native SIM SMS is only available on Android. Change channel to Swala SMS or QuickSMS in Settings.'),
           ),
         );
       }
@@ -392,8 +393,7 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton.icon(
-                      onPressed:
-                          (isLoading || !canSendSms) ? null : _sendSms,
+                      onPressed: (isLoading || !canSendSms) ? null : _sendSms,
                       icon: isLoading
                           ? const SizedBox(
                               width: 20,
@@ -404,7 +404,9 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
                       label: Text(
                         isLoading
                             ? 'Sending...'
-                            : (canSendSms ? 'Send SMS' : 'SIM Sending (Android Only)'),
+                            : (canSendSms
+                                ? 'Send SMS'
+                                : 'SIM Sending (Android Only)'),
                       ),
                     ),
                   ),
