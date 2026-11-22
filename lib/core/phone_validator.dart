@@ -10,6 +10,7 @@
 /// - +1 555-123-4567 (formatted)
 /// - +254712345678 (Kenya)
 /// - +86 138 0013 8000 (China)
+library;
 
 class PhoneValidator {
   /// Validates and normalizes a phone number to E.164 format

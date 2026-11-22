@@ -418,7 +418,7 @@ class _ProviderManagementScreenState extends State<ProviderManagementScreen>
                       );
                       setModalState(() => isTesting = false);
 
-                      if (ctx.mounted) {
+                      if (ctx.mounted && context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(result.message),
