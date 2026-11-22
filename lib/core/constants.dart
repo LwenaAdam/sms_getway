@@ -57,7 +57,7 @@ class AppConstants {
   // ===== PALM PESA TANZANIA CONFIGURATION =====
   static const String palmPesaBaseUrl = String.fromEnvironment(
     'PALMPESA_BASE_URL',
-    defaultValue: 'https://palmpesa.drmlelwa.co.tz',
+    defaultValue: 'https://palmpesa.co.tz',
   );
   static const String palmPesaUserRef = String.fromEnvironment(
     'PALMPESA_USER_REF',

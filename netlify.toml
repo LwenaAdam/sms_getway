@@ -16,6 +16,20 @@
   force = true
   headers = {X-Forwarded-Host = "smsgetway.techware.africa"}
 
+# Proxy Palm Pesa payments to bypass browser CORS on Web
+[[redirects]]
+  from = "/palmpesa-api/*"
+  to = "https://palmpesa.co.tz/:splat"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/palmpesa-api/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Access-Control-Allow-Headers = "Authorization, Content-Type, Accept, X-User-Ref"
+
 [[redirects]]
   from = "/api"
   to = "https://kzjgdeqfmxkmpmadtbpb.supabase.co/functions/v1/sms-api"

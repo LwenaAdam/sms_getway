@@ -42,7 +42,14 @@ class PalmPesaService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final url = prefs.getString(_baseUrlKey);
-      if (url != null && url.trim().isNotEmpty) return url.trim();
+      if (url != null &&
+          url.trim().isNotEmpty &&
+          !url.contains('drmlelwa')) {
+        return url.trim();
+      } else if (url != null && url.contains('drmlelwa')) {
+        // Clear obsolete cached drmlelwa domain
+        await prefs.remove(_baseUrlKey);
+      }
     } catch (_) {}
     return AppConstants.palmPesaBaseUrl;
   }
@@ -92,6 +99,19 @@ class PalmPesaService {
     return 'Mobile Money (TZ)';
   }
 
+  /// Resolve the effective base URL handling Flutter Web CORS
+  String _getEffectiveBaseUrl(String baseUrl) {
+    if (kIsWeb) {
+      if (Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1') {
+        // When running on local Chrome, route through the live Netlify proxy with CORS enabled
+        return 'https://smsgetway.techware.africa/palmpesa-api';
+      }
+      // On production Netlify (same origin), route through /palmpesa-api
+      return '${Uri.base.origin}/palmpesa-api';
+    }
+    return baseUrl;
+  }
+
   /// Initiate Money Request / Push USSD to customer's phone
   Future<({bool success, String message, String? transactionId})> requestPayment({
     required String phone,
@@ -104,13 +124,12 @@ class PalmPesaService {
   }) async {
     try {
       final token = await getApiToken();
-      final userRef = await getUserRef();
       final baseUrl = await getBaseUrl();
 
       if (token.isEmpty) {
         return (
           success: false,
-          message: 'Palm Pesa API Token is missing. Configure it in Settings → Billing.',
+          message: 'Payment Gateway is not configured. Please contact support.',
           transactionId: null,
         );
       }
@@ -134,39 +153,33 @@ class PalmPesaService {
         'phone': normalizedPhone,
         'name': customerName?.isNotEmpty == true ? customerName! : 'Customer ($normalizedPhone)',
         'email': customerEmail?.isNotEmpty == true ? customerEmail! : 'customer@techware.africa',
-        'public_user_ref': userRef,
-        'callback_url': 'https://smsgetway.techware.africa/api/payments/palmpesa/callback',
-        'buyer_remarks': 'Payment for $planName',
-        'merchant_remarks': 'SMS Gateway Pro - $planName',
+        'callback_url': 'https://smsgetway.techware.africa/api/payments/callback',
       };
 
       final headers = {
         'Authorization': 'Bearer $token',
-        'X-User-Ref': userRef,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       };
 
-      debugPrint('💳 [PalmPesa] Initiating payment for $amountInTzs TZS to $normalizedPhone (Ref: $userRef)...');
+      final effectiveBase = _getEffectiveBaseUrl(baseUrl);
+      debugPrint('💳 [PalmPesa] Initiating payment for $amountInTzs TZS to $normalizedPhone via $effectiveBase...');
 
-      // Attempt endpoint: Primary is /api/v2/async/payments, fallback is /api/v1/moneyRequest
-      Uri targetUri = Uri.parse('$baseUrl/api/v2/async/payments');
-      http.Response response = await http
+      final targetUri = Uri.parse('$effectiveBase/api/v2/async/payments');
+      final response = await http
           .post(targetUri, headers: headers, body: jsonEncode(payload))
           .timeout(const Duration(seconds: 30));
-
-      if (response.statusCode == 404) {
-        debugPrint('⚠️ [PalmPesa] v2 endpoint 404, attempting /moneyRequest or /api/v1/moneyRequest...');
-        targetUri = Uri.parse('$baseUrl/moneyRequest');
-        response = await http
-            .post(targetUri, headers: headers, body: jsonEncode(payload))
-            .timeout(const Duration(seconds: 30));
-      }
 
       debugPrint('🔍 [PalmPesa] Response status: ${response.statusCode}');
       debugPrint('📋 [PalmPesa] Response body: ${response.body}');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
+        String? orderId;
+        try {
+          final resData = jsonDecode(response.body);
+          orderId = resData['data']?['order_id'];
+        } catch (_) {}
+
         // Log transaction to database
         await _logPaymentRecord(
           transactionId: transactionId,
@@ -182,7 +195,7 @@ class PalmPesaService {
         return (
           success: true,
           message: 'USSD prompt sent! Please enter your PIN on your phone to complete payment.',
-          transactionId: transactionId,
+          transactionId: orderId ?? transactionId,
         );
       } else {
         String errMsg = 'Payment request failed (Status: ${response.statusCode})';
@@ -207,30 +220,29 @@ class PalmPesaService {
     }
   }
 
-  /// Check payment status by transaction ID
+  /// Check payment status by transaction ID or order ID
   Future<String> checkPaymentStatus(String transactionId) async {
     try {
       final token = await getApiToken();
-      final userRef = await getUserRef();
       final baseUrl = await getBaseUrl();
+      final effectiveBase = _getEffectiveBaseUrl(baseUrl);
 
-      final url = Uri.parse('$baseUrl/api/v2/payments/$transactionId');
+      final url = Uri.parse('$effectiveBase/api/v2/async/payments/$transactionId');
       final response = await http.get(
         url,
         headers: {
           'Authorization': 'Bearer $token',
-          'X-User-Ref': userRef,
           'Accept': 'application/json',
         },
       ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final status = (data['status'] ?? '').toString().toLowerCase();
-        if (status.contains('complete') || status.contains('success')) {
+        final status = (data['data']?['status'] ?? data['status'] ?? '').toString().toUpperCase();
+        if (status == 'COMPLETED' || status == 'SUCCESS') {
           await _updatePaymentStatus(transactionId, 'completed');
           return 'completed';
-        } else if (status.contains('fail') || status.contains('cancel')) {
+        } else if (status.contains('FAIL') || status.contains('CANCEL') || status.contains('REJECT')) {
           await _updatePaymentStatus(transactionId, 'failed');
           return 'failed';
         }
