@@ -211,13 +211,6 @@ class ProviderManagerService extends ChangeNotifier {
   Future<void> deleteSmsProvider(String id) async {
     _smsProviders.removeWhere((p) => p.id == id);
     await _saveLocalSmsProviders();
-    try {
-      await Supabase.instance.client
-          .schema('sms_gateway')
-          .from('sms_providers')
-          .delete()
-          .eq('id', id);
-    } catch (_) {}
     notifyListeners();
   }
 
@@ -256,13 +249,6 @@ class ProviderManagerService extends ChangeNotifier {
   Future<void> deletePaymentProvider(String id) async {
     _paymentProviders.removeWhere((p) => p.id == id);
     await _saveLocalPaymentProviders();
-    try {
-      await Supabase.instance.client
-          .schema('sms_gateway')
-          .from('payment_providers')
-          .delete()
-          .eq('id', id);
-    } catch (_) {}
     notifyListeners();
   }
 
@@ -369,33 +355,14 @@ class ProviderManagerService extends ChangeNotifier {
   }
 
   Future<void> _syncFromSupabase() async {
-    try {
-      final supabase = Supabase.instance.client;
-      final smsData = await supabase.schema('sms_gateway').from('sms_providers').select('*');
-      if (smsData.isNotEmpty) {
-        _smsProviders = smsData.map((e) => SmsProviderConfig.fromJson(e)).toList();
-        await _saveLocalSmsProviders();
-      }
-
-      final payData = await supabase.schema('sms_gateway').from('payment_providers').select('*');
-      if (payData.isNotEmpty) {
-        _paymentProviders = payData.map((e) => PaymentProviderConfig.fromJson(e)).toList();
-        await _saveLocalPaymentProviders();
-      }
-    } catch (_) {}
+    // No-op: Platform credentials are loaded directly from .env / AppConstants.
   }
 
   Future<void> _syncSmsProviderToSupabase(SmsProviderConfig provider) async {
-    try {
-      final supabase = Supabase.instance.client;
-      await supabase.schema('sms_gateway').from('sms_providers').upsert(provider.toJson());
-    } catch (_) {}
+    // No-op
   }
 
   Future<void> _syncPaymentProviderToSupabase(PaymentProviderConfig provider) async {
-    try {
-      final supabase = Supabase.instance.client;
-      await supabase.schema('sms_gateway').from('payment_providers').upsert(provider.toJson());
-    } catch (_) {}
+    // No-op
   }
 }
