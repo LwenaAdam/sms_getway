@@ -100,7 +100,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
     _checkAuthAndTenant();
 
     // Listen to Supabase auth state changes (e.g. Google OAuth redirect callback)
-    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    _authSubscription =
+        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       debugPrint('🔔 [AuthWrapper] Auth event: ${data.event}');
       if (data.event == AuthChangeEvent.signedIn ||
           data.event == AuthChangeEvent.tokenRefreshed ||
@@ -155,7 +156,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
     // If new user (e.g. via Google OAuth) with no tenant, auto-provision workspace!
     if (!hasAccess || tenantService.tenantsCount == 0) {
-      final autoCreated = await tenantService.autoProvisionWorkspaceForUser(session.user);
+      final autoCreated =
+          await tenantService.autoProvisionWorkspaceForUser(session.user);
       if (autoCreated) {
         hasAccess = await tenantService.loadTenantsForUser(session.user.id);
       }
@@ -423,7 +425,8 @@ class _LoginPageState extends State<LoginPage> {
             // Official Google Sign-In Button
             GoogleSignInButton(
               isLoading: isGoogleLoading,
-              onPressed: (isLoading || isGoogleLoading) ? null : _signInWithGoogle,
+              onPressed:
+                  (isLoading || isGoogleLoading) ? null : _signInWithGoogle,
             ),
             const SizedBox(height: AppTheme.paddingLarge),
 
@@ -496,7 +499,8 @@ class _LoginPageState extends State<LoginPage> {
           ? (Uri.base.hasAuthority ? '${Uri.base.origin}/' : null)
           : 'io.supabase.smsgetway://login-callback';
 
-      debugPrint('🔑 Starting Google OAuth with redirect: $redirectUrl (platform: ${kIsWeb ? "Web" : "Mobile"})');
+      debugPrint(
+          '🔑 Starting Google OAuth with redirect: $redirectUrl (platform: ${kIsWeb ? "Web" : "Mobile"})');
 
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
@@ -551,9 +555,11 @@ class _LoginPageState extends State<LoginPage> {
             await tenantService.loadTenantsForUser(response.user!.id);
 
         if (!hasAccess || tenantService.tenantsCount == 0) {
-          final autoCreated = await tenantService.autoProvisionWorkspaceForUser(response.user!);
+          final autoCreated =
+              await tenantService.autoProvisionWorkspaceForUser(response.user!);
           if (autoCreated) {
-            hasAccess = await tenantService.loadTenantsForUser(response.user!.id);
+            hasAccess =
+                await tenantService.loadTenantsForUser(response.user!.id);
           }
         }
 
