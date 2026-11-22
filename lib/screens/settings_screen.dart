@@ -15,7 +15,6 @@ import 'tenant_selector_screen.dart';
 import 'api_settings_screen.dart';
 import 'marketing_settings_screen.dart';
 import 'billing_screen.dart';
-import 'provider_management_screen.dart';
 import '../services/sms_service.dart';
 import '../services/provider_manager_service.dart';
 
@@ -209,197 +208,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  void _showChannelDialog() async {
-    final manager = ProviderManagerService();
-    await manager.init();
-    final customSmsProviders = manager.smsProviders
-        .where(
-            (p) => p.slug != 'swala_sms' && p.slug != 'quicksms' && p.isActive)
-        .toList();
-
-    if (!mounted) return;
-
+  void _showChannelDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Select SMS Channel'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              RadioListTile<String>(
-                title: const Text('Local Phone SIM (Device SIM)'),
-                subtitle:
-                    const Text('Send SMS using device SIM card (Android only)'),
-                value: 'thisPhone',
-                groupValue: selectedChannelRaw,
-                onChanged: (val) {
-                  if (val != null) {
-                    _saveRawChannelPreference(val, 'Local Phone SIM');
-                    Navigator.pop(context);
-                  }
-                },
-              ),
-              RadioListTile<String>(
-                title: const Text('Cloud Gateway (Branded Sender ID)'),
-                subtitle: const Text(
-                    'Send high-speed SMS via cloud with custom Sender ID'),
-                value: 'swalaSMS',
-                groupValue: selectedChannelRaw,
-                onChanged: (val) {
-                  if (val != null) {
-                    _saveRawChannelPreference(val, 'Cloud Gateway');
-                    Navigator.pop(context);
-                  }
-                },
-              ),
-              RadioListTile<String>(
-                title: const Text('Direct Cloud API'),
-                subtitle: const Text('Send SMS directly via cloud gateway API'),
-                value: 'quickSMS',
-                groupValue: selectedChannelRaw,
-                onChanged: (val) {
-                  if (val != null) {
-                    _saveRawChannelPreference(val, 'Direct Cloud API');
-                    Navigator.pop(context);
-                  }
-                },
-              ),
-              if (customSmsProviders.isNotEmpty) ...[
-                const Divider(),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Custom Providers',
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey),
-                    ),
-                  ),
-                ),
-                ...customSmsProviders.map(
-                  (p) => RadioListTile<String>(
-                    title: Text(p.name),
-                    subtitle: Text(
-                        'Endpoint: ${p.endpointUrl} (Sender: ${p.senderId})'),
-                    value: 'provider:${p.id}',
-                    groupValue: selectedChannelRaw,
-                    onChanged: (val) {
-                      if (val != null) {
-                        _saveRawChannelPreference(val, p.name);
-                        Navigator.pop(context);
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ],
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<String>(
+              title: const Text('Local Phone SIM (Device SIM)'),
+              subtitle:
+                  const Text('Send SMS using device SIM card (Android only)'),
+              value: 'thisPhone',
+              groupValue: selectedChannelRaw,
+              onChanged: (val) {
+                if (val != null) {
+                  _saveRawChannelPreference(val, 'Local Phone SIM');
+                  Navigator.pop(context);
+                }
+              },
+            ),
+            RadioListTile<String>(
+              title: const Text('Cloud Gateway (Branded Sender ID)'),
+              subtitle: const Text(
+                  'Send high-speed SMS via cloud with custom Sender ID'),
+              value: 'swalaSMS',
+              groupValue: selectedChannelRaw,
+              onChanged: (val) {
+                if (val != null) {
+                  _saveRawChannelPreference(val, 'Cloud Gateway');
+                  Navigator.pop(context);
+                }
+              },
+            ),
+          ],
         ),
         actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const ProviderManagementScreen()),
-              ).then((_) => _loadChannelPreference());
-            },
-            child: const Text('Manage Gateways'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showSwalaSmsConfigDialog();
-            },
-            child: const Text('Cloud Sender ID Setup'),
-          ),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSwalaSmsConfigDialog() async {
-    final currentKey = await SmsService.getSwalaApiKey();
-    final currentSender = await SmsService.getSwalaSenderId();
-
-    final apiKeyController = TextEditingController(text: currentKey);
-    final senderIdController = TextEditingController(text: currentSender);
-
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.sms, color: Colors.blue),
-            SizedBox(width: 8),
-            Text('Cloud Sender ID & API Setup'),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Configure your branded Sender ID and cloud SMS credentials to send SMS using your business identity.',
-                style: TextStyle(fontSize: 13, color: Colors.grey),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: apiKeyController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Gateway API Key',
-                  hintText: 'Enter your gateway API key',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.key),
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: senderIdController,
-                decoration: const InputDecoration(
-                  labelText: 'Branded Sender ID',
-                  hintText: 'e.g. MYSCHOOL or TECHWARE',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.badge),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await SmsService.saveSwalaCredentials(
-                apiKey: apiKeyController.text,
-                senderId: senderIdController.text,
-              );
-              if (ctx.mounted) {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('✅ Cloud Gateway credentials saved!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            },
-            child: const Text('Save'),
           ),
         ],
       ),
@@ -800,40 +648,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: Text(
               selectedChannelRaw == 'swalaSMS'
                   ? 'Cloud Gateway (Branded Sender ID)'
-                  : selectedChannelRaw == 'quickSMS'
-                      ? 'Direct Cloud API'
-                      : selectedChannelRaw == 'thisPhone'
-                          ? 'Local Phone SIM (Device SIM)'
-                          : (selectedCustomProviderName ?? 'Custom Provider'),
+                  : 'Local Phone SIM (Device SIM)',
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: _showChannelDialog,
           ),
-          ListTile(
-            leading: const Icon(Icons.key, color: Colors.blue),
-            title: const Text('Cloud Sender ID & API Setup'),
-            subtitle: const Text(
-                'Configure your branded Sender ID & cloud credentials'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _showSwalaSmsConfigDialog,
-          ),
-          ListTile(
-            leading: const Icon(Icons.hub, color: Colors.indigo),
-            title: const Text('Gateway & Provider Manager (Admin)'),
-            subtitle: const Text(
-                'Add, configure & test custom SMS and payment providers'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ProviderManagementScreen(),
-                ),
-              );
-              _loadChannelPreference();
-            },
-          ),
-
           const Divider(),
           // Billing & Monetization Section
           Padding(

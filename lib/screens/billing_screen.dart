@@ -4,7 +4,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/constants.dart';
 import '../core/tenant_service.dart';
 import '../services/palmpesa_service.dart';
-import 'provider_management_screen.dart';
 
 class BillingScreen extends StatefulWidget {
   const BillingScreen({super.key});
@@ -16,112 +15,6 @@ class BillingScreen extends StatefulWidget {
 class _BillingScreenState extends State<BillingScreen> {
   final PalmPesaService _palmPesa = PalmPesaService();
   final TenantService _tenantService = TenantService();
-
-  String? _configuredToken;
-  String? _configuredUserRef;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCredentials();
-  }
-
-  Future<void> _loadCredentials() async {
-    final token = await _palmPesa.getApiToken();
-    final userRef = await _palmPesa.getUserRef();
-    if (mounted) {
-      setState(() {
-        _configuredToken = token;
-        _configuredUserRef = userRef;
-      });
-    }
-  }
-
-  void _showConfigureCredentialsDialog() {
-    final tokenController = TextEditingController(text: _configuredToken ?? '');
-    final userRefController = TextEditingController(
-      text: _configuredUserRef?.isNotEmpty == true
-          ? _configuredUserRef
-          : AppConstants.palmPesaUserRef,
-    );
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.payment, color: Colors.teal),
-            SizedBox(width: 8),
-            Text('Mobile Money Gateway Setup (Admin)'),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Configure mobile money gateway credentials to collect payments directly from customers.',
-                style: TextStyle(fontSize: 13, color: Colors.grey),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: userRefController,
-                decoration: const InputDecoration(
-                  labelText: 'Public Merchant Ref',
-                  hintText: 'e.g. USR-579470B9AB51',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.badge),
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: tokenController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'API Token',
-                  hintText: 'Enter Gateway API token',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.key),
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Token is obtained from your payment provider API credentials section.',
-                style: TextStyle(fontSize: 11, color: Colors.grey),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await _palmPesa.saveCredentials(
-                apiToken: tokenController.text,
-                userRef: userRefController.text,
-              );
-              await _loadCredentials();
-              if (ctx.mounted) {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                        '✅ Mobile Money Gateway credentials saved successfully'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            },
-            child: const Text('Save Credentials'),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _openCheckoutDialog({
     required String planName,
@@ -305,12 +198,6 @@ class _BillingScreenState extends State<BillingScreen> {
                                     SnackBar(
                                       content: Text('❌ ${result.message}'),
                                       backgroundColor: Colors.red,
-                                      action: SnackBarAction(
-                                        label: 'Settings',
-                                        textColor: Colors.white,
-                                        onPressed:
-                                            _showConfigureCredentialsDialog,
-                                      ),
                                     ),
                                   );
                                 }
@@ -483,25 +370,6 @@ class _BillingScreenState extends State<BillingScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Billing & Plans'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.hub),
-            tooltip: 'Manage Payment Gateways',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ProviderManagementScreen(),
-                ),
-              ).then((_) => _loadCredentials());
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: 'Gateway Configuration',
-            onPressed: _showConfigureCredentialsDialog,
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -544,11 +412,6 @@ class _BillingScreenState extends State<BillingScreen> {
                           ),
                         ],
                       ),
-                    ),
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.tune, size: 16),
-                      label: const Text('Gateway'),
-                      onPressed: _showConfigureCredentialsDialog,
                     ),
                   ],
                 ),
