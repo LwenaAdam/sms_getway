@@ -7,6 +7,9 @@ The SMS Gateway API allows external systems to send SMS messages through your SM
 > [!TIP]
 > **Interactive OpenAPI 3.0 (Swagger) Specification Available**:
 > You can import or view the complete machine-readable specification in [openapi.yaml](openapi.yaml) to generate client SDKs or test requests interactively.
+>
+> **External Management App Integration Guide**:
+> For developers building external admin dashboards, CRM integrations, or centralized control portals, read the complete [EXTERNAL_MANAGEMENT_INTEGRATION_GUIDE.md](EXTERNAL_MANAGEMENT_INTEGRATION_GUIDE.md).
 > 
 > **Maintainer Portfolio**: [techware.africa](https://techware.africa) | **GitHub**: [@LwenaAdam](https://github.com/LwenaAdam)
 
@@ -378,36 +381,77 @@ Device B:
 ### Complete Flow
 
 ```
-External API
+External API / Management App
      ↓
-POST /sms-api/send
+POST https://smsgetway.techware.africa/api/send
      ↓
-Validate API key
+Validate API key (SHA-256)
      ↓
 Insert into sms_requests (status=pending)
      ↓
 Flutter App (ApiSmsQueueService)
      ↓
-Poll every 30 seconds
+Polls / Listens to Supabase Queue
      ↓
 Fetch pending requests
      ↓
-Get user's SMS channel from SharedPreferences
-(or restored from Settings Backup)
+Get active SMS channel preference:
+     ├── "This Phone"          → Native Android SIM
+     ├── "Swala SMS (TZ)"     → HTTP POST swalasms.com (Branded Sender ID)
+     ├── "QuickSMS"           → HTTP POST quicksms API
+     └── "Dynamic Providers"  → Custom REST Webhook defined in sms_providers
      ↓
-    ┌────────────────┐
-    ↓                ↓
-"This Phone"    "QuickSMS API"
-    ↓                ↓
-NativeSms       HTTP POST
-    ↓                ↓
-  SIM           QuickSMS
-    ↓                ↓
+Execute send with retry & error handling
+     ↓
 Update sms_requests (status=sent/failed)
      ↓
-Log to sms_logs
+Insert audit log into sms_logs
      ↓
 SMS Delivered!
 ```
+
+---
+
+## Mobile Money Payment & Billing API (Palm Pesa Tz)
+
+The platform supports automated mobile money collection (Vodacom M-Pesa, Tigo Pesa / Mixx, Airtel Money, HaloPesa) via Palm Pesa Tz (`USR-579470B9AB51`).
+
+### Initiate Payment (USSD Push)
+
+```http
+POST https://palmpesa.drmlelwa.co.tz/api/v2/async/payments
+Authorization: Bearer <PALMPESA_API_TOKEN>
+X-User-Ref: USR-579470B9AB51
+Content-Type: application/json
+
+{
+  "transaction_id": "SGW_1732280000_XYZ",
+  "amount": 50000,
+  "currency": "TZS",
+  "phone": "255744123456",
+  "name": "Customer Name",
+  "email": "customer@techware.africa",
+  "public_user_ref": "USR-579470B9AB51",
+  "callback_url": "https://smsgetway.techware.africa/api/payments/palmpesa/callback",
+  "buyer_remarks": "Subscription for Business Pro",
+  "merchant_remarks": "SMS Gateway Pro Plan"
+}
+```
+
+### Webhook Callback
+
+Palm Pesa notifies `https://smsgetway.techware.africa/api/payments/palmpesa/callback` upon user PIN confirmation:
+
+```json
+{
+  "transaction_id": "SGW_1732280000_XYZ",
+  "reference": "PP_TXN_998877",
+  "status": "completed",
+  "amount": 50000,
+  "currency": "TZS",
+  "phone": "255744123456"
+}
+```
+Transactions are persisted in `sms_gateway.payments` with RLS policies.
 
 ---

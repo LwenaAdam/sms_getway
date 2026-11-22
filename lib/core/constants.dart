@@ -36,6 +36,31 @@ class AppConstants {
   );
   static const String quickSmsSenderId = 'SMS_GATEWAY';
 
+  // ===== SWALA SMS API CONFIGURATION =====
+  static const String swalaSmsBaseUrl = 'https://swalasms.com/api/v1';
+  static const String swalaSmsApiKey = String.fromEnvironment(
+    'SWALA_SMS_API_KEY',
+    defaultValue: '',
+  );
+  static const String swalaSmsSenderId = String.fromEnvironment(
+    'SWALA_SMS_SENDER_ID',
+    defaultValue: 'SMS_GATEWAY',
+  );
+
+  // ===== PALM PESA TANZANIA CONFIGURATION =====
+  static const String palmPesaBaseUrl = String.fromEnvironment(
+    'PALMPESA_BASE_URL',
+    defaultValue: 'https://palmpesa.drmlelwa.co.tz',
+  );
+  static const String palmPesaUserRef = String.fromEnvironment(
+    'PALMPESA_USER_REF',
+    defaultValue: 'USR-579470B9AB51',
+  );
+  static const String palmPesaApiToken = String.fromEnvironment(
+    'PALMPESA_API_TOKEN',
+    defaultValue: '',
+  );
+
   // ===== RATE LIMITING =====
   static const int maxSmsPerMinute = 30;
   static const int maxSmsPerDay = 500;

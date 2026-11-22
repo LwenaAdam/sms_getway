@@ -17,6 +17,8 @@ import 'screens/api_settings_screen.dart';
 import 'screens/tenant_selector_screen.dart';
 import 'screens/complete_registration_page.dart';
 import 'screens/download_app_banner.dart';
+import 'screens/billing_screen.dart';
+import 'services/provider_manager_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 void main() async {
@@ -24,7 +26,8 @@ void main() async {
 
   // Initialize Supabase
   try {
-    if (AppConstants.supabaseUrl.isEmpty || AppConstants.supabaseAnonKey.isEmpty) {
+    if (AppConstants.supabaseUrl.isEmpty ||
+        AppConstants.supabaseAnonKey.isEmpty) {
       debugPrint('⚠️ WARNING: SUPABASE_URL or SUPABASE_ANON_KEY is not set!');
       debugPrint('👉 Run with: flutter run --dart-define-from-file=.env');
     }
@@ -42,6 +45,9 @@ void main() async {
 
   // Initialize LocalDataService (offline-first)
   await LocalDataService().initialize();
+
+  // Initialize ProviderManagerService (dynamic SMS & Payment Gateways)
+  await ProviderManagerService().init();
 
   runApp(
     ChangeNotifierProvider(
@@ -938,11 +944,12 @@ class _HomePageState extends State<HomePage> {
                         // API & Developer Quick Access Card
                         Card(
                           child: Padding(
-                            padding: const EdgeInsets.all(AppTheme.paddingMedium),
+                            padding:
+                                const EdgeInsets.all(AppTheme.paddingMedium),
                             child: LayoutBuilder(
                               builder: (context, constraints) {
                                 final isNarrow = constraints.maxWidth < 450;
-                                
+
                                 final buttons = Wrap(
                                   spacing: 8,
                                   runSpacing: 8,
@@ -952,20 +959,39 @@ class _HomePageState extends State<HomePage> {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (_) => const ApiSettingsScreen(),
+                                            builder: (_) =>
+                                                const ApiSettingsScreen(),
                                           ),
                                         );
                                       },
                                       icon: const Icon(Icons.key, size: 18),
                                       label: const Text('API Keys'),
                                     ),
+                                    OutlinedButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const BillingScreen(),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(
+                                          Icons.account_balance_wallet,
+                                          size: 18,
+                                          color: Colors.teal),
+                                      label: const Text('Billing & Plans'),
+                                    ),
                                     if (kIsWeb)
                                       ElevatedButton.icon(
                                         onPressed: () async {
-                                          final uri = Uri.parse('/api-docs.html');
+                                          final uri =
+                                              Uri.parse('/api-docs.html');
                                           await launchUrl(uri);
                                         },
-                                        icon: const Icon(Icons.open_in_new, size: 18),
+                                        icon: const Icon(Icons.open_in_new,
+                                            size: 18),
                                         label: const Text('View Docs'),
                                       )
                                     else
@@ -974,11 +1000,13 @@ class _HomePageState extends State<HomePage> {
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) => const ApiSettingsScreen(),
+                                              builder: (_) =>
+                                                  const ApiSettingsScreen(),
                                             ),
                                           );
                                         },
-                                        icon: const Icon(Icons.description, size: 18),
+                                        icon: const Icon(Icons.description,
+                                            size: 18),
                                         label: const Text('API Docs'),
                                       ),
                                   ],
@@ -986,37 +1014,50 @@ class _HomePageState extends State<HomePage> {
 
                                 if (isNarrow) {
                                   return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
                                           Container(
                                             padding: const EdgeInsets.all(12),
                                             decoration: BoxDecoration(
-                                              color: Theme.of(context).colorScheme.primaryContainer,
-                                              borderRadius: BorderRadius.circular(10),
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primaryContainer,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
                                             ),
                                             child: Icon(
                                               Icons.api,
-                                              color: Theme.of(context).colorScheme.primary,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary,
                                               size: 28,
                                             ),
                                           ),
                                           const SizedBox(width: 12),
                                           Expanded(
                                             child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 Text(
                                                   'Developer API & Docs',
-                                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                                        fontWeight: FontWeight.bold,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .titleMedium
+                                                      ?.copyWith(
+                                                        fontWeight:
+                                                            FontWeight.bold,
                                                       ),
                                                 ),
                                                 const SizedBox(height: 2),
                                                 Text(
                                                   'Integrate SMS delivery into external apps and webhooks',
-                                                  style: Theme.of(context).textTheme.bodySmall,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodySmall,
                                                 ),
                                               ],
                                             ),
@@ -1034,30 +1075,40 @@ class _HomePageState extends State<HomePage> {
                                     Container(
                                       padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.primaryContainer,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primaryContainer,
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Icon(
                                         Icons.api,
-                                        color: Theme.of(context).colorScheme.primary,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
                                         size: 28,
                                       ),
                                     ),
                                     const SizedBox(width: 16),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             'Developer API & Docs',
-                                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium
+                                                ?.copyWith(
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
                                             'Integrate SMS delivery into external apps and webhooks',
-                                            style: Theme.of(context).textTheme.bodySmall,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall,
                                           ),
                                         ],
                                       ),
@@ -1084,7 +1135,8 @@ class _HomePageState extends State<HomePage> {
                                 children: [
                                   Row(
                                     children: [
-                                      const Icon(Icons.warning, color: Colors.orange),
+                                      const Icon(Icons.warning,
+                                          color: Colors.orange),
                                       const SizedBox(width: 8),
                                       Text(
                                         'Sync Issue Detected',

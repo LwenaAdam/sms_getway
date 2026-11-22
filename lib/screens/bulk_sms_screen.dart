@@ -3,10 +3,11 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/theme.dart';
 import '../core/tenant_service.dart';
 import '../services/local_data_service.dart';
-import '../api/native_sms_service.dart';
+import '../services/sms_service.dart';
 import '../contacts/contact_model.dart';
 import '../groups/group_model.dart';
 import 'marketing/campaign_list_screen.dart';
@@ -30,6 +31,7 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
   bool isLoadingContacts = true;
   String selectedMode = 'contacts'; // 'contacts' or 'group'
   String? selectedGroupId;
+  String currentChannel = 'thisPhone';
 
   @override
   void initState() {
@@ -39,12 +41,16 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
 
   void _loadData() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final channel = prefs.getString('sms_channel') ?? 'thisPhone';
+
       // Load from local database (offline-first)
       final contacts = await LocalDataService().getContacts();
       final groups = await LocalDataService().getGroups();
 
       if (mounted) {
         setState(() {
+          currentChannel = channel;
           availableContacts = contacts;
           availableGroups = groups;
           isLoadingContacts = false;
@@ -95,20 +101,22 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
       return;
     }
 
-    final bool isAndroid = !kIsWeb && Platform.isAndroid;
-    if (!isAndroid) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('SMS sending is only available on Android devices'),
-        ),
-      );
-      return;
-    }
-
     // Load selected SMS channel from SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     final selectedChannel = prefs.getString('sms_channel') ?? 'thisPhone';
     debugPrint('📱 Using SMS Channel: $selectedChannel');
+
+    final bool isAndroid = !kIsWeb && Platform.isAndroid;
+    if (selectedChannel == 'thisPhone' && !isAndroid) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Native SIM SMS is only available on Android. Change channel to Swala SMS or QuickSMS in Settings.'),
+          ),
+        );
+      }
+      return;
+    }
 
     setState(() => isLoading = true);
 
@@ -118,7 +126,7 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
         throw 'No tenant selected';
       }
 
-      // Android platform - Request SMS permission for "This Phone" channel
+      // Android SIM platform - Request SMS permission for "This Phone" channel
       if (selectedChannel == 'thisPhone') {
         final status = await Permission.sms.request();
         if (!status.isGranted) {
@@ -132,47 +140,39 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
         }
       }
 
-      // Android platform - proceed with normal SMS sending
-      int successCount = 0;
-      int failureCount = 0;
+      final user = Supabase.instance.client.auth.currentUser;
+      final result = await SmsService.sendBulkSms(
+        phoneNumbers: recipients.map((c) => c.phoneNumber).toList(),
+        message: messageController.text,
+        userId: user?.id ?? 'anonymous',
+        tenantId: tenantId,
+      );
 
-      if (selectedChannel == 'thisPhone') {
-        // Send SMS using device's native SMS capability
-        await _sendSmsUsingDevice(
-          recipients: recipients,
-          message: messageController.text,
-          tenantId: tenantId,
-          onSuccess: (count) => successCount = count,
-          onFailure: (count) => failureCount = count,
-        );
-      } else if (selectedChannel == 'quickSMS') {
-        // Send SMS using QuickSMS API (to be implemented)
-        debugPrint('🚀 Using QuickSMS API channel (not yet implemented)');
-        // For now, just log to database
-        await _logSmsToDatabase(
-          recipients: recipients,
-          message: messageController.text,
-          tenantId: tenantId,
-          channel: 'bulk',
-          onSuccess: (count) => successCount = count,
-          onFailure: (count) => failureCount = count,
-        );
-      }
+      final int successCount = result['success'] as int? ?? 0;
+      final int failureCount = result['failed'] as int? ?? 0;
 
       if (mounted) {
         setState(() => isLoading = false);
+        final channelDisplayName = selectedChannel == 'thisPhone'
+            ? 'This Phone (SIM)'
+            : selectedChannel == 'swalaSMS'
+                ? 'Swala SMS (Tanzania)'
+                : selectedChannel == 'quickSMS'
+                    ? 'QuickSMS'
+                    : 'Custom Provider';
+
         showDialog(
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
-            title: const Text('SMS Sent Successfully!'),
+            title: const Text('SMS Sent!'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.check_circle,
-                  color: Colors.green,
+                Icon(
+                  failureCount == 0 ? Icons.check_circle : Icons.info,
+                  color: failureCount == 0 ? Colors.green : Colors.orange,
                   size: 48,
                 ),
                 const SizedBox(height: 16),
@@ -181,7 +181,7 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
                 if (failureCount > 0) Text('❌ Failed: $failureCount'),
                 const SizedBox(height: 8),
                 Text(
-                  'Channel: ${selectedChannel == 'thisPhone' ? 'This Phone' : 'QuickSMS'}',
+                  'Channel: $channelDisplayName',
                   style: const TextStyle(
                     fontSize: 12,
                     color: Colors.grey,
@@ -228,100 +228,10 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
     }
   }
 
-  Future<void> _sendSmsUsingDevice({
-    required List<Contact> recipients,
-    required String message,
-    required String tenantId,
-    required Function(int) onSuccess,
-    required Function(int) onFailure,
-  }) async {
-    int successCount = 0;
-    int failureCount = 0;
-
-    try {
-      // Extract phone numbers from recipients
-      final phoneNumbers = recipients.map((r) => r.phoneNumber).toList();
-
-      debugPrint(
-          '📱 Sending SMS to ${phoneNumbers.length} recipients using native Android');
-
-      // Send bulk SMS using native Android
-      final result = await NativeSmsService.sendBulkSms(
-        phoneNumbers: phoneNumbers,
-        message: message,
-      );
-
-      successCount = result['successCount'] as int;
-      final failedNumbers = result['failedNumbers'] as List<String>;
-      failureCount = failedNumbers.length;
-
-      debugPrint(
-          '✅ Native SMS send complete: $successCount sent, $failureCount failed');
-
-      // Log SMS to local database (offline-first)
-      for (final recipient in recipients) {
-        try {
-          final wasSent = !failedNumbers.contains(recipient.phoneNumber);
-
-          await LocalDataService().logSms(
-            phoneNumber: recipient.phoneNumber,
-            message: message,
-            status: wasSent ? 'sent' : 'failed',
-            contactId: recipient.id,
-            channel: 'bulk',
-          );
-
-          debugPrint('📊 SMS logged for ${recipient.phoneNumber}');
-        } catch (e) {
-          debugPrint('❌ Error logging SMS for ${recipient.phoneNumber}: $e');
-        }
-      }
-    } catch (e) {
-      failureCount = recipients.length;
-      debugPrint('❌ Error sending bulk SMS: $e');
-    }
-
-    onSuccess(successCount);
-    onFailure(failureCount);
-  }
-
-
-  Future<void> _logSmsToDatabase({
-    required List<Contact> recipients,
-    required String message,
-    required String tenantId,
-    required String channel,
-    required Function(int) onSuccess,
-    required Function(int) onFailure,
-  }) async {
-    int successCount = 0;
-    int failureCount = 0;
-
-    for (final recipient in recipients) {
-      try {
-        await LocalDataService().logSms(
-          phoneNumber: recipient.phoneNumber,
-          message: message,
-          status: 'sent',
-          contactId: recipient.id,
-          channel: channel,
-        );
-
-        successCount++;
-        debugPrint('✅ SMS logged via $channel for ${recipient.phoneNumber}');
-      } catch (e) {
-        failureCount++;
-        debugPrint('❌ Error logging SMS for ${recipient.phoneNumber}: $e');
-      }
-    }
-
-    onSuccess(successCount);
-    onFailure(failureCount);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final bool canSendSms = !kIsWeb && Platform.isAndroid;
+    final bool isAndroid = !kIsWeb && Platform.isAndroid;
+    final bool canSendSms = currentChannel != 'thisPhone' || isAndroid;
 
     return Scaffold(
       appBar: AppBar(
@@ -494,14 +404,14 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
                       label: Text(
                         isLoading
                             ? 'Sending...'
-                            : (canSendSms ? 'Send SMS' : 'Android Only'),
+                            : (canSendSms ? 'Send SMS' : 'SIM Sending (Android Only)'),
                       ),
                     ),
                   ),
                   if (!canSendSms) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'SMS sending is disabled on web and non-Android platforms.',
+                      'Device SIM sending is Android only. Switch to Swala SMS or QuickSMS in Settings to send directly from Web.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Colors.orange.shade700,
                           ),

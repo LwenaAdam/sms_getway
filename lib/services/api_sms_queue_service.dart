@@ -283,12 +283,29 @@ class ApiSmsQueueService extends ChangeNotifier {
               userId: userId,
               tenantId: request.tenantId,
             )
-          : await SmsService.sendViaNativeAndroid(
-              phoneNumber: request.phoneNumber,
-              message: request.message,
-              userId: userId,
-              tenantId: request.tenantId,
-            );
+          : selectedChannel == 'swalaSMS'
+              ? await SmsService.sendViaSwalaSms(
+                  phoneNumber: request.phoneNumber,
+                  message: request.message,
+                  userId: userId,
+                  tenantId: request.tenantId,
+                )
+              : selectedChannel == 'thisPhone'
+                  ? await SmsService.sendViaNativeAndroid(
+                      phoneNumber: request.phoneNumber,
+                      message: request.message,
+                      userId: userId,
+                      tenantId: request.tenantId,
+                    )
+                  : await SmsService.sendViaDynamicProvider(
+                      phoneNumber: request.phoneNumber,
+                      message: request.message,
+                      userId: userId,
+                      tenantId: request.tenantId,
+                      providerId: selectedChannel.startsWith('provider:')
+                          ? selectedChannel.replaceFirst('provider:', '')
+                          : selectedChannel,
+                    );
 
       if (success) {
         await _updateRequestStatus(request.id, 'sent');

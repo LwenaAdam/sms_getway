@@ -10,9 +10,41 @@ import 'package:uuid/uuid.dart';
 import '../core/constants.dart';
 import '../sms/sms_log_model.dart';
 import '../api/native_sms_service.dart';
+import '../models/provider_models.dart';
+import 'provider_manager_service.dart';
 
 class SmsService {
   static const String _channelKey = 'sms_channel';
+
+  /// Get Swala SMS API key from SharedPreferences with fallback to AppConstants
+  static Future<String> getSwalaApiKey() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = prefs.getString('swala_sms_api_key');
+      if (key != null && key.trim().isNotEmpty) return key.trim();
+    } catch (_) {}
+    return AppConstants.swalaSmsApiKey;
+  }
+
+  /// Get Swala SMS Sender ID from SharedPreferences with fallback to AppConstants
+  static Future<String> getSwalaSenderId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final sender = prefs.getString('swala_sms_sender_id');
+      if (sender != null && sender.trim().isNotEmpty) return sender.trim();
+    } catch (_) {}
+    return AppConstants.swalaSmsSenderId;
+  }
+
+  /// Save Swala SMS credentials to SharedPreferences
+  static Future<void> saveSwalaCredentials({
+    required String apiKey,
+    required String senderId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('swala_sms_api_key', apiKey.trim());
+    await prefs.setString('swala_sms_sender_id', senderId.trim());
+  }
 
   /// Get saved SMS channel preference
   static Future<String> getSelectedChannel() async {
@@ -22,6 +54,93 @@ class SmsService {
     } catch (e) {
       debugPrint('❌ Error loading channel: $e');
       return 'thisPhone';
+    }
+  }
+
+  /// Send SMS using Swala SMS API (https://swalasms.com)
+  static Future<bool> sendViaSwalaSms({
+    required String phoneNumber,
+    required String message,
+    required String userId,
+    required String? tenantId,
+  }) async {
+    try {
+      debugPrint('📱 Sending SMS via SwalaSMS to: $phoneNumber');
+
+      final apiKey = await getSwalaApiKey();
+      final senderId = await getSwalaSenderId();
+
+      if (apiKey.isEmpty) {
+        throw Exception(
+          'SwalaSMS API Key is not configured. Please add it in Settings → SMS Channel.',
+        );
+      }
+
+      final url = Uri.parse('${AppConstants.swalaSmsBaseUrl}/sms/messages');
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $apiKey',
+      };
+
+      // Normalize phone number (Swala SMS expects e.g. 255XXXXXXXXX)
+      String cleanPhone = phoneNumber.replaceAll(RegExp(r'[^0-9]'), '');
+      if (cleanPhone.startsWith('0')) {
+        cleanPhone = '255${cleanPhone.substring(1)}';
+      }
+
+      final body = jsonEncode({
+        'sender_id': senderId.isNotEmpty ? senderId : 'SMS_GATEWAY',
+        'recipients': [cleanPhone],
+        'message': message,
+      });
+
+      final response = await http
+          .post(url, headers: headers, body: body)
+          .timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('SwalaSMS request timeout');
+        },
+      );
+
+      debugPrint('🔍 SwalaSMS Response: ${response.statusCode}');
+      debugPrint('📋 Response Body: ${response.body}');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        await _logSmsToDatabase(
+          phoneNumber: cleanPhone,
+          message: message,
+          userId: userId,
+          tenantId: tenantId,
+          status: AppConstants.smsSent,
+          errorMessage: null,
+        );
+
+        debugPrint('✅ SMS sent successfully via SwalaSMS');
+        return true;
+      } else {
+        String errMsg = 'Status ${response.statusCode}';
+        try {
+          final errorData = jsonDecode(response.body);
+          errMsg = errorData['message'] ?? errorData['error'] ?? response.body;
+        } catch (_) {
+          errMsg = response.body;
+        }
+        throw Exception('SwalaSMS Error: $errMsg');
+      }
+    } catch (e) {
+      debugPrint('❌ SwalaSMS Error: $e');
+
+      await _logSmsToDatabase(
+        phoneNumber: phoneNumber,
+        message: message,
+        userId: userId,
+        tenantId: tenantId,
+        status: AppConstants.smsFailed,
+        errorMessage: e.toString(),
+      );
+
+      return false;
     }
   }
 
@@ -157,6 +276,63 @@ class SmsService {
     }
   }
 
+  /// Send SMS using dynamic provider configured by admin in ProviderManagerService
+  static Future<bool> sendViaDynamicProvider({
+    required String phoneNumber,
+    required String message,
+    required String userId,
+    required String? tenantId,
+    String? providerId,
+  }) async {
+    try {
+      final manager = ProviderManagerService();
+      await manager.init();
+
+      SmsProviderConfig? targetProvider;
+      if (providerId != null && providerId.isNotEmpty) {
+        try {
+          targetProvider = manager.smsProviders.firstWhere((p) => p.id == providerId || p.slug == providerId);
+        } catch (_) {}
+      }
+      targetProvider ??= manager.defaultSmsProvider;
+
+      if (targetProvider == null) {
+        throw Exception('No active SMS provider configured. Please configure in Settings → Gateway & Provider Manager.');
+      }
+
+      final result = await manager.sendDynamicSms(
+        phone: phoneNumber,
+        message: message,
+        provider: targetProvider,
+      );
+
+      if (result.success) {
+        await _logSmsToDatabase(
+          phoneNumber: phoneNumber,
+          message: message,
+          userId: userId,
+          tenantId: tenantId,
+          status: AppConstants.smsSent,
+          errorMessage: null,
+        );
+        return true;
+      } else {
+        throw Exception(result.message);
+      }
+    } catch (e) {
+      debugPrint('❌ Dynamic Provider Error: $e');
+      await _logSmsToDatabase(
+        phoneNumber: phoneNumber,
+        message: message,
+        userId: userId,
+        tenantId: tenantId,
+        status: AppConstants.smsFailed,
+        errorMessage: e.toString(),
+      );
+      return false;
+    }
+  }
+
   /// Send bulk SMS to multiple recipients
   static Future<Map<String, dynamic>> sendBulkSms({
     required List<String> phoneNumbers,
@@ -186,12 +362,31 @@ class SmsService {
           userId: userId,
           tenantId: tenantId,
         );
-      } else {
+      } else if (channel == 'swalaSMS') {
+        success = await sendViaSwalaSms(
+          phoneNumber: phoneNumber,
+          message: message,
+          userId: userId,
+          tenantId: tenantId,
+        );
+      } else if (channel == 'thisPhone') {
         success = await sendViaNativeAndroid(
           phoneNumber: phoneNumber,
           message: message,
           userId: userId,
           tenantId: tenantId,
+        );
+      } else {
+        // Any custom provider ID (e.g. 'provider:xyz' or 'slug')
+        final provId = channel.startsWith('provider:')
+            ? channel.replaceFirst('provider:', '')
+            : channel;
+        success = await sendViaDynamicProvider(
+          phoneNumber: phoneNumber,
+          message: message,
+          userId: userId,
+          tenantId: tenantId,
+          providerId: provId,
         );
       }
 

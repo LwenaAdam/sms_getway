@@ -142,6 +142,47 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /payments/palmpesa/initiate:
+    post:
+      summary: Initiate Palm Pesa Mobile Money Payment (USSD Push)
+      description: Initiates a mobile money payment prompt (Vodacom M-Pesa, Tigo Pesa, Airtel Money, HaloPesa) using Palm Pesa Tanzania with Public User Ref USR-579470B9AB51.
+      operationId: initiatePalmPesaPayment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PalmPesaPaymentRequest'
+      responses:
+        '202':
+          description: Payment request accepted and USSD push initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PalmPesaPaymentResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /payments/palmpesa/callback:
+    post:
+      summary: Palm Pesa Payment Callback Webhook
+      description: Receives asynchronous transaction completion events from Palm Pesa Tanzania.
+      operationId: palmpesaPaymentCallback
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PalmPesaCallbackPayload'
+      responses:
+        '200':
+          description: Callback processed successfully
+
   /docs:
     get:
       summary: API Documentation Manifest
@@ -313,3 +354,83 @@ components:
         error:
           type: string
           example: "Missing API key"
+
+    PalmPesaPaymentRequest:
+      type: object
+      required:
+        - phone
+        - amount
+      properties:
+        phone:
+          type: string
+          description: Recipient mobile money number (e.g. 255744123456)
+          example: "255744123456"
+        amount:
+          type: number
+          description: Amount in Tanzanian Shillings (TZS)
+          example: 50000
+        currency:
+          type: string
+          default: "TZS"
+          example: "TZS"
+        name:
+          type: string
+          description: Customer name
+          example: "Acme Supermarket"
+        email:
+          type: string
+          format: email
+          example: "finance@acme.co.tz"
+        public_user_ref:
+          type: string
+          default: "USR-579470B9AB51"
+          example: "USR-579470B9AB51"
+        plan_name:
+          type: string
+          example: "Business Pro Plan"
+
+    PalmPesaPaymentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: string
+          example: "pending"
+        message:
+          type: string
+          example: "USSD push dispatched to phone."
+        transaction_id:
+          type: string
+          example: "SGW_1732280000_XYZ890"
+
+    PalmPesaCallbackPayload:
+      type: object
+      required:
+        - transaction_id
+        - status
+      properties:
+        transaction_id:
+          type: string
+          example: "SGW_1732280000_XYZ890"
+        reference:
+          type: string
+          example: "PP_TXN_998877"
+        status:
+          type: string
+          enum: [pending, completed, failed, cancelled]
+          example: "completed"
+        amount:
+          type: number
+          example: 50000
+        currency:
+          type: string
+          example: "TZS"
+        phone:
+          type: string
+          example: "255744123456"
+        completed_at:
+          type: string
+          format: date-time
+          example: "2026-11-22T14:30:00Z"

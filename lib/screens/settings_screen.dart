@@ -14,9 +14,13 @@ import 'profile_screen.dart';
 import 'tenant_selector_screen.dart';
 import 'api_settings_screen.dart';
 import 'marketing_settings_screen.dart';
+import 'billing_screen.dart';
+import 'provider_management_screen.dart';
+import '../services/sms_service.dart';
+import '../services/provider_manager_service.dart';
 
 // SMS Channel options
-enum SmsChannel { thisPhone, quickSMS }
+enum SmsChannel { thisPhone, quickSMS, swalaSMS, customProvider }
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -29,6 +33,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? userEmail;
   String? userId;
   SmsChannel selectedChannel = SmsChannel.thisPhone;
+  String selectedChannelRaw = 'thisPhone';
+  String? selectedCustomProviderName;
   bool autoStartApiQueue = false;
   bool notificationsEnabled = true;
   final TenantService _tenantService = TenantService();
@@ -56,11 +62,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedChannel = prefs.getString('sms_channel') ?? 'thisPhone';
-      setState(() {
-        selectedChannel = savedChannel == 'quickSMS'
-            ? SmsChannel.quickSMS
-            : SmsChannel.thisPhone;
-      });
+      selectedChannelRaw = savedChannel;
+
+      if (savedChannel == 'quickSMS') {
+        selectedChannel = SmsChannel.quickSMS;
+      } else if (savedChannel == 'swalaSMS') {
+        selectedChannel = SmsChannel.swalaSMS;
+      } else if (savedChannel == 'thisPhone') {
+        selectedChannel = SmsChannel.thisPhone;
+      } else {
+        selectedChannel = SmsChannel.customProvider;
+        final manager = ProviderManagerService();
+        await manager.init();
+        final provId = savedChannel.startsWith('provider:')
+            ? savedChannel.replaceFirst('provider:', '')
+            : savedChannel;
+        try {
+          final prov = manager.smsProviders.firstWhere(
+            (p) => p.id == provId || p.slug == provId,
+            orElse: () =>
+                manager.defaultSmsProvider ?? manager.smsProviders.first,
+          );
+          selectedCustomProviderName = prov.name;
+        } catch (_) {}
+      }
+      if (mounted) setState(() {});
       debugPrint('✅ Loaded SMS channel: $savedChannel');
     } catch (e) {
       debugPrint('❌ Error loading channel preference: $e');
@@ -94,19 +120,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  void _saveChannelPreference(SmsChannel channel) async {
+  void _saveRawChannelPreference(String channelRaw, String displayName) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final channelName =
-          channel == SmsChannel.quickSMS ? 'quickSMS' : 'thisPhone';
-      await prefs.setString('sms_channel', channelName);
+      await prefs.setString('sms_channel', channelRaw);
       setState(() {
-        selectedChannel = channel;
+        selectedChannelRaw = channelRaw;
+        if (channelRaw == 'quickSMS') {
+          selectedChannel = SmsChannel.quickSMS;
+        } else if (channelRaw == 'swalaSMS') {
+          selectedChannel = SmsChannel.swalaSMS;
+        } else if (channelRaw == 'thisPhone') {
+          selectedChannel = SmsChannel.thisPhone;
+        } else {
+          selectedChannel = SmsChannel.customProvider;
+          selectedCustomProviderName = displayName;
+        }
       });
-      debugPrint('✅ Saved SMS channel: $channelName');
+      debugPrint('✅ Saved SMS channel: $channelRaw ($displayName)');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Channel changed to: ${channel.name}')),
+          SnackBar(content: Text('Channel changed to: $displayName')),
         );
       }
     } catch (e) {
@@ -175,44 +209,196 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  void _showChannelDialog() {
+  void _showChannelDialog() async {
+    final manager = ProviderManagerService();
+    await manager.init();
+    final customSmsProviders = manager.smsProviders
+        .where(
+            (p) => p.slug != 'swala_sms' && p.slug != 'quicksms' && p.isActive)
+        .toList();
+
+    if (!mounted) return;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Select SMS Channel'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RadioListTile<SmsChannel>(
-              title: const Text('This Phone'),
-              subtitle: const Text('Send SMS using device SIM'),
-              value: SmsChannel.thisPhone,
-              groupValue: selectedChannel,
-              onChanged: (channel) {
-                if (channel != null) {
-                  _saveChannelPreference(channel);
-                  Navigator.pop(context);
-                }
-              },
-            ),
-            RadioListTile<SmsChannel>(
-              title: const Text('QuickSMS'),
-              subtitle: const Text('Send SMS using QuickSMS API'),
-              value: SmsChannel.quickSMS,
-              groupValue: selectedChannel,
-              onChanged: (channel) {
-                if (channel != null) {
-                  _saveChannelPreference(channel);
-                  Navigator.pop(context);
-                }
-              },
-            ),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<String>(
+                title: const Text('This Phone'),
+                subtitle: const Text('Send SMS using device SIM'),
+                value: 'thisPhone',
+                groupValue: selectedChannelRaw,
+                onChanged: (val) {
+                  if (val != null) {
+                    _saveRawChannelPreference(val, 'This Phone');
+                    Navigator.pop(context);
+                  }
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('Swala SMS (Tanzania)'),
+                subtitle:
+                    const Text('Send SMS via SwalaSMS API & Branded Sender ID'),
+                value: 'swalaSMS',
+                groupValue: selectedChannelRaw,
+                onChanged: (val) {
+                  if (val != null) {
+                    _saveRawChannelPreference(val, 'Swala SMS');
+                    Navigator.pop(context);
+                  }
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('QuickSMS'),
+                subtitle: const Text('Send SMS using QuickSMS API'),
+                value: 'quickSMS',
+                groupValue: selectedChannelRaw,
+                onChanged: (val) {
+                  if (val != null) {
+                    _saveRawChannelPreference(val, 'QuickSMS');
+                    Navigator.pop(context);
+                  }
+                },
+              ),
+              if (customSmsProviders.isNotEmpty) ...[
+                const Divider(),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Custom Providers',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey),
+                    ),
+                  ),
+                ),
+                ...customSmsProviders.map(
+                  (p) => RadioListTile<String>(
+                    title: Text(p.name),
+                    subtitle: Text(
+                        'Endpoint: ${p.endpointUrl} (Sender: ${p.senderId})'),
+                    value: 'provider:${p.id}',
+                    groupValue: selectedChannelRaw,
+                    onChanged: (val) {
+                      if (val != null) {
+                        _saveRawChannelPreference(val, p.name);
+                        Navigator.pop(context);
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const ProviderManagementScreen()),
+              ).then((_) => _loadChannelPreference());
+            },
+            child: const Text('Manage Gateways'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _showSwalaSmsConfigDialog();
+            },
+            child: const Text('Configure SwalaSMS'),
+          ),
+          TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSwalaSmsConfigDialog() async {
+    final currentKey = await SmsService.getSwalaApiKey();
+    final currentSender = await SmsService.getSwalaSenderId();
+
+    final apiKeyController = TextEditingController(text: currentKey);
+    final senderIdController = TextEditingController(text: currentSender);
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.sms, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Swala SMS Setup'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Configure your Swala SMS API credentials (https://swalasms.com/sms/api-keys) to send SMS using branded Sender ID in Tanzania.',
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: apiKeyController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Swala API Key',
+                  hintText: 'Paste API Key from swalasms.com',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.key),
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: senderIdController,
+                decoration: const InputDecoration(
+                  labelText: 'Sender ID',
+                  hintText: 'e.g. MYSCHOOL or TECHWARE',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.badge),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await SmsService.saveSwalaCredentials(
+                apiKey: apiKeyController.text,
+                senderId: senderIdController.text,
+              );
+              if (ctx.mounted) {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('✅ Swala SMS credentials saved!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -611,12 +797,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading: const Icon(Icons.sms),
             title: const Text('SMS Channel'),
             subtitle: Text(
-              selectedChannel == SmsChannel.quickSMS
-                  ? 'QuickSMS'
-                  : 'This Phone',
+              selectedChannelRaw == 'swalaSMS'
+                  ? 'Swala SMS (Tanzania)'
+                  : selectedChannelRaw == 'quickSMS'
+                      ? 'QuickSMS'
+                      : selectedChannelRaw == 'thisPhone'
+                          ? 'This Phone'
+                          : (selectedCustomProviderName ?? 'Custom Provider'),
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: _showChannelDialog,
+          ),
+          ListTile(
+            leading: const Icon(Icons.key, color: Colors.blue),
+            title: const Text('Swala SMS API Keys'),
+            subtitle: const Text('Configure swalasms.com API key & Sender ID'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _showSwalaSmsConfigDialog,
+          ),
+          ListTile(
+            leading: const Icon(Icons.hub, color: Colors.indigo),
+            title: const Text('Gateway & Provider Manager'),
+            subtitle: const Text(
+                'Add, configure & test custom SMS and payment providers'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ProviderManagementScreen(),
+                ),
+              );
+              _loadChannelPreference();
+            },
+          ),
+
+          const Divider(),
+          // Billing & Monetization Section
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Text(
+              'Billing & Monetization',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: Theme.of(context).primaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+          ),
+          ListTile(
+            leading:
+                const Icon(Icons.account_balance_wallet, color: Colors.teal),
+            title: const Text('Billing & Plans (Palm Pesa Tz)'),
+            subtitle: const Text('Subscribe, buy credits & collect payments'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const BillingScreen(),
+                ),
+              );
+            },
           ),
 
           // API Settings Section
@@ -873,7 +1114,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                     child: Text(
                       'Settings Backup',
-                      style: Theme.of(backupContext).textTheme.labelMedium?.copyWith(
+                      style: Theme.of(backupContext)
+                          .textTheme
+                          .labelMedium
+                          ?.copyWith(
                             color: Theme.of(backupContext).primaryColor,
                             fontWeight: FontWeight.bold,
                           ),
@@ -901,7 +1145,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         : () async {
                             if (userId == null) {
                               if (backupContext.mounted) {
-                                ScaffoldMessenger.of(backupContext).showSnackBar(
+                                ScaffoldMessenger.of(backupContext)
+                                    .showSnackBar(
                                   const SnackBar(
                                     content: Text('User not authenticated'),
                                   ),
@@ -913,7 +1158,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             final tenantId = _tenantService.tenantId;
                             if (tenantId == null) {
                               if (backupContext.mounted) {
-                                ScaffoldMessenger.of(backupContext).showSnackBar(
+                                ScaffoldMessenger.of(backupContext)
+                                    .showSnackBar(
                                   const SnackBar(
                                     content: Text('No tenant selected'),
                                   ),
@@ -959,7 +1205,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         : () async {
                             if (userId == null) {
                               if (backupContext.mounted) {
-                                ScaffoldMessenger.of(backupContext).showSnackBar(
+                                ScaffoldMessenger.of(backupContext)
+                                    .showSnackBar(
                                   const SnackBar(
                                     content: Text('User not authenticated'),
                                   ),
@@ -971,7 +1218,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             final tenantId = _tenantService.tenantId;
                             if (tenantId == null) {
                               if (backupContext.mounted) {
-                                ScaffoldMessenger.of(backupContext).showSnackBar(
+                                ScaffoldMessenger.of(backupContext)
+                                    .showSnackBar(
                                   const SnackBar(
                                     content: Text('No tenant selected'),
                                   ),
