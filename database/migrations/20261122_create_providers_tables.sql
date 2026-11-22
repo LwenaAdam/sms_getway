@@ -38,7 +38,9 @@ FOR SELECT
 TO authenticated
 USING (
     tenant_id IS NULL OR tenant_id IN (
-        SELECT tenant_id FROM sms_gateway.tenant_users WHERE user_id = auth.uid()
+        SELECT tenant_id FROM sms_gateway.tenant_members WHERE user_id = auth.uid()
+        UNION
+        SELECT tenant_id FROM sms_gateway.users WHERE id = auth.uid()
     )
 );
 
@@ -48,12 +50,16 @@ FOR ALL
 TO authenticated
 USING (
     tenant_id IS NULL OR tenant_id IN (
-        SELECT tenant_id FROM sms_gateway.tenant_users WHERE user_id = auth.uid()
+        SELECT tenant_id FROM sms_gateway.tenant_members WHERE user_id = auth.uid()
+        UNION
+        SELECT tenant_id FROM sms_gateway.users WHERE id = auth.uid()
     )
 )
 WITH CHECK (
     tenant_id IS NULL OR tenant_id IN (
-        SELECT tenant_id FROM sms_gateway.tenant_users WHERE user_id = auth.uid()
+        SELECT tenant_id FROM sms_gateway.tenant_members WHERE user_id = auth.uid()
+        UNION
+        SELECT tenant_id FROM sms_gateway.users WHERE id = auth.uid()
     )
 );
 
@@ -101,7 +107,9 @@ FOR SELECT
 TO authenticated
 USING (
     tenant_id IS NULL OR tenant_id IN (
-        SELECT tenant_id FROM sms_gateway.tenant_users WHERE user_id = auth.uid()
+        SELECT tenant_id FROM sms_gateway.tenant_members WHERE user_id = auth.uid()
+        UNION
+        SELECT tenant_id FROM sms_gateway.users WHERE id = auth.uid()
     )
 );
 
@@ -111,12 +119,16 @@ FOR ALL
 TO authenticated
 USING (
     tenant_id IS NULL OR tenant_id IN (
-        SELECT tenant_id FROM sms_gateway.tenant_users WHERE user_id = auth.uid()
+        SELECT tenant_id FROM sms_gateway.tenant_members WHERE user_id = auth.uid()
+        UNION
+        SELECT tenant_id FROM sms_gateway.users WHERE id = auth.uid()
     )
 )
 WITH CHECK (
     tenant_id IS NULL OR tenant_id IN (
-        SELECT tenant_id FROM sms_gateway.tenant_users WHERE user_id = auth.uid()
+        SELECT tenant_id FROM sms_gateway.tenant_members WHERE user_id = auth.uid()
+        UNION
+        SELECT tenant_id FROM sms_gateway.users WHERE id = auth.uid()
     )
 );
 

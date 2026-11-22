@@ -489,11 +489,14 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      const redirectUrl = kIsWeb
-          ? null // in web, null keeps it in current window/domain
+      // Dynamic multiplatform redirect URL:
+      // - Web: Uses current domain origin (e.g. https://smsgetway.techware.africa/)
+      // - Mobile: Uses Android deep link scheme (io.supabase.smsgetway://login-callback)
+      final String? redirectUrl = kIsWeb
+          ? (Uri.base.hasAuthority ? '${Uri.base.origin}/' : null)
           : 'io.supabase.smsgetway://login-callback';
 
-      debugPrint('🔑 Starting Google OAuth with redirect: $redirectUrl');
+      debugPrint('🔑 Starting Google OAuth with redirect: $redirectUrl (platform: ${kIsWeb ? "Web" : "Mobile"})');
 
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,

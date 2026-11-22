@@ -36,8 +36,12 @@ TO authenticated
 USING (
     tenant_id IN (
         SELECT tenant_id 
-        FROM sms_gateway.tenant_users 
+        FROM sms_gateway.tenant_members 
         WHERE user_id = auth.uid()
+        UNION
+        SELECT tenant_id
+        FROM sms_gateway.users
+        WHERE id = auth.uid()
     )
     OR user_id = auth.uid()
 );
@@ -50,8 +54,12 @@ TO authenticated
 WITH CHECK (
     tenant_id IN (
         SELECT tenant_id 
-        FROM sms_gateway.tenant_users 
+        FROM sms_gateway.tenant_members 
         WHERE user_id = auth.uid()
+        UNION
+        SELECT tenant_id
+        FROM sms_gateway.users
+        WHERE id = auth.uid()
     )
     OR user_id = auth.uid()
 );

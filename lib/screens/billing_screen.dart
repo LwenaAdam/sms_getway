@@ -52,7 +52,7 @@ class _BillingScreenState extends State<BillingScreen> {
           children: [
             Icon(Icons.payment, color: Colors.teal),
             SizedBox(width: 8),
-            Text('Palm Pesa API Setup'),
+            Text('Mobile Money Gateway Setup (Admin)'),
           ],
         ),
         content: SingleChildScrollView(
@@ -61,14 +61,14 @@ class _BillingScreenState extends State<BillingScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Configure your Palm Pesa Tanzania gateway credentials to collect mobile money directly from customers.',
+                'Configure mobile money gateway credentials to collect payments directly from customers.',
                 style: TextStyle(fontSize: 13, color: Colors.grey),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: userRefController,
                 decoration: const InputDecoration(
-                  labelText: 'Public User Ref',
+                  labelText: 'Public Merchant Ref',
                   hintText: 'e.g. USR-579470B9AB51',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.badge),
@@ -80,14 +80,14 @@ class _BillingScreenState extends State<BillingScreen> {
                 obscureText: true,
                 decoration: const InputDecoration(
                   labelText: 'API Token',
-                  hintText: 'Paste your Palm Pesa API token',
+                  hintText: 'Enter Gateway API token',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.key),
                 ),
               ),
               const SizedBox(height: 8),
               const Text(
-                'Token is obtained from your Palm Pesa dashboard under Developer Options / API Token.',
+                'Token is obtained from your payment provider API credentials section.',
                 style: TextStyle(fontSize: 11, color: Colors.grey),
               ),
             ],
@@ -109,7 +109,8 @@ class _BillingScreenState extends State<BillingScreen> {
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('✅ Palm Pesa credentials saved successfully'),
+                    content: Text(
+                        '✅ Mobile Money Gateway credentials saved successfully'),
                     backgroundColor: Colors.green,
                   ),
                 );
@@ -179,7 +180,8 @@ class _BillingScreenState extends State<BillingScreen> {
                       decoration: BoxDecoration(
                         color: Colors.teal.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.teal.withValues(alpha: 0.3)),
+                        border: Border.all(
+                            color: Colors.teal.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -202,7 +204,8 @@ class _BillingScreenState extends State<BillingScreen> {
                     const SizedBox(height: 16),
                     const Text(
                       'Payment Method: Mobile Money (Tanzania)',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                     ),
                     const SizedBox(height: 8),
                     Wrap(
@@ -261,7 +264,8 @@ class _BillingScreenState extends State<BillingScreen> {
                                 if (phone.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('Please enter phone number'),
+                                      content:
+                                          Text('Please enter phone number'),
                                       backgroundColor: Colors.red,
                                     ),
                                   );
@@ -272,7 +276,8 @@ class _BillingScreenState extends State<BillingScreen> {
                                   isSubmitting = true;
                                 });
 
-                                final user = Supabase.instance.client.auth.currentUser;
+                                final user =
+                                    Supabase.instance.client.auth.currentUser;
                                 final result = await _palmPesa.requestPayment(
                                   phone: phone,
                                   amount: amount,
@@ -303,7 +308,8 @@ class _BillingScreenState extends State<BillingScreen> {
                                       action: SnackBarAction(
                                         label: 'Settings',
                                         textColor: Colors.white,
-                                        onPressed: _showConfigureCredentialsDialog,
+                                        onPressed:
+                                            _showConfigureCredentialsDialog,
                                       ),
                                     ),
                                   );
@@ -324,8 +330,9 @@ class _BillingScreenState extends State<BillingScreen> {
                                   const Icon(Icons.lock_outline, size: 18),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Pay ${amount.round()} TZS via PalmPesa',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                    'Pay ${amount.round()} TZS via Mobile Money',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold),
                                   ),
                                 ],
                               ),
@@ -356,8 +363,10 @@ class _BillingScreenState extends State<BillingScreen> {
         return StatefulBuilder(
           builder: (ctx, setDialogState) {
             // Auto poll every 5 seconds up to 60 seconds
-            pollTimer ??= Timer.periodic(const Duration(seconds: 5), (timer) async {
-              final newStatus = await _palmPesa.checkPaymentStatus(transactionId);
+            pollTimer ??=
+                Timer.periodic(const Duration(seconds: 5), (timer) async {
+              final newStatus =
+                  await _palmPesa.checkPaymentStatus(transactionId);
               if (ctx.mounted) {
                 setDialogState(() {
                   status = newStatus;
@@ -369,7 +378,8 @@ class _BillingScreenState extends State<BillingScreen> {
             });
 
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               title: Row(
                 children: [
                   Icon(
@@ -416,7 +426,8 @@ class _BillingScreenState extends State<BillingScreen> {
                     const Text(
                       'Payment received! Your subscription has been updated.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                   ] else ...[
                     const Text(
@@ -456,7 +467,8 @@ class _BillingScreenState extends State<BillingScreen> {
     return Chip(
       label: Text(
         label,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
+        style:
+            TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
       ),
       backgroundColor: color.withValues(alpha: 0.1),
       visualDensity: VisualDensity.compact,
@@ -486,7 +498,7 @@ class _BillingScreenState extends State<BillingScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.settings),
-            tooltip: 'Palm Pesa Credentials',
+            tooltip: 'Gateway Configuration',
             onPressed: _showConfigureCredentialsDialog,
           ),
         ],
@@ -499,7 +511,8 @@ class _BillingScreenState extends State<BillingScreen> {
             // Workspace Card
             Card(
               elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
@@ -549,7 +562,7 @@ class _BillingScreenState extends State<BillingScreen> {
             ),
             const SizedBox(height: 4),
             const Text(
-              'Charge your customers or subscribe via Palm Pesa Mobile Money (M-Pesa, Tigo, Airtel, Halotel).',
+              'Subscribe or purchase credits instantly via Mobile Money (M-Pesa, Tigo Pesa, Airtel Money, HaloPesa).',
               style: TextStyle(fontSize: 13, color: Colors.grey),
             ),
             const SizedBox(height: 16),
@@ -580,7 +593,7 @@ class _BillingScreenState extends State<BillingScreen> {
               isPopular: true,
               features: [
                 'Everything in Starter',
-                'SwalaSMS Branded Sender ID support',
+                'High-Speed Branded Sender ID support',
                 'High-speed automated background queue',
                 'Unlimited Contacts & API Keys',
                 'Priority delivery routes',
@@ -596,7 +609,7 @@ class _BillingScreenState extends State<BillingScreen> {
               amount: 15000,
               badge: 'Pay-As-You-Go',
               features: [
-                '1,000 SMS Credits via SwalaSMS',
+                '1,000 Cloud SMS Credits',
                 'Branded Sender ID included',
                 'No monthly expiration',
                 'Instant top-up to account',
@@ -636,7 +649,8 @@ class _BillingScreenState extends State<BillingScreen> {
             if (badge != null)
               Container(
                 margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
@@ -712,7 +726,7 @@ class _BillingScreenState extends State<BillingScreen> {
                   );
                 },
                 child: Text(
-                  'Pay with PalmPesa ($price)',
+                  'Pay with Mobile Money ($price)',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),

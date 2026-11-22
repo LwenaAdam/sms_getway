@@ -228,38 +228,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               RadioListTile<String>(
-                title: const Text('This Phone'),
-                subtitle: const Text('Send SMS using device SIM'),
+                title: const Text('Local Phone SIM (Device SIM)'),
+                subtitle:
+                    const Text('Send SMS using device SIM card (Android only)'),
                 value: 'thisPhone',
                 groupValue: selectedChannelRaw,
                 onChanged: (val) {
                   if (val != null) {
-                    _saveRawChannelPreference(val, 'This Phone');
+                    _saveRawChannelPreference(val, 'Local Phone SIM');
                     Navigator.pop(context);
                   }
                 },
               ),
               RadioListTile<String>(
-                title: const Text('Swala SMS (Tanzania)'),
-                subtitle:
-                    const Text('Send SMS via SwalaSMS API & Branded Sender ID'),
+                title: const Text('Cloud Gateway (Branded Sender ID)'),
+                subtitle: const Text(
+                    'Send high-speed SMS via cloud with custom Sender ID'),
                 value: 'swalaSMS',
                 groupValue: selectedChannelRaw,
                 onChanged: (val) {
                   if (val != null) {
-                    _saveRawChannelPreference(val, 'Swala SMS');
+                    _saveRawChannelPreference(val, 'Cloud Gateway');
                     Navigator.pop(context);
                   }
                 },
               ),
               RadioListTile<String>(
-                title: const Text('QuickSMS'),
-                subtitle: const Text('Send SMS using QuickSMS API'),
+                title: const Text('Direct Cloud API'),
+                subtitle: const Text('Send SMS directly via cloud gateway API'),
                 value: 'quickSMS',
                 groupValue: selectedChannelRaw,
                 onChanged: (val) {
                   if (val != null) {
-                    _saveRawChannelPreference(val, 'QuickSMS');
+                    _saveRawChannelPreference(val, 'Direct Cloud API');
                     Navigator.pop(context);
                   }
                 },
@@ -315,7 +316,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Navigator.pop(context);
               _showSwalaSmsConfigDialog();
             },
-            child: const Text('Configure SwalaSMS'),
+            child: const Text('Cloud Sender ID Setup'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -341,7 +342,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Icon(Icons.sms, color: Colors.blue),
             SizedBox(width: 8),
-            Text('Swala SMS Setup'),
+            Text('Cloud Sender ID & API Setup'),
           ],
         ),
         content: SingleChildScrollView(
@@ -350,7 +351,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Configure your Swala SMS API credentials (https://swalasms.com/sms/api-keys) to send SMS using branded Sender ID in Tanzania.',
+                'Configure your branded Sender ID and cloud SMS credentials to send SMS using your business identity.',
                 style: TextStyle(fontSize: 13, color: Colors.grey),
               ),
               const SizedBox(height: 16),
@@ -358,8 +359,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 controller: apiKeyController,
                 obscureText: true,
                 decoration: const InputDecoration(
-                  labelText: 'Swala API Key',
-                  hintText: 'Paste API Key from swalasms.com',
+                  labelText: 'Gateway API Key',
+                  hintText: 'Enter your gateway API key',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.key),
                 ),
@@ -368,7 +369,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               TextField(
                 controller: senderIdController,
                 decoration: const InputDecoration(
-                  labelText: 'Sender ID',
+                  labelText: 'Branded Sender ID',
                   hintText: 'e.g. MYSCHOOL or TECHWARE',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.badge),
@@ -392,7 +393,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('✅ Swala SMS credentials saved!'),
+                    content: Text('✅ Cloud Gateway credentials saved!'),
                     backgroundColor: Colors.green,
                   ),
                 );
@@ -798,11 +799,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: const Text('SMS Channel'),
             subtitle: Text(
               selectedChannelRaw == 'swalaSMS'
-                  ? 'Swala SMS (Tanzania)'
+                  ? 'Cloud Gateway (Branded Sender ID)'
                   : selectedChannelRaw == 'quickSMS'
-                      ? 'QuickSMS'
+                      ? 'Direct Cloud API'
                       : selectedChannelRaw == 'thisPhone'
-                          ? 'This Phone'
+                          ? 'Local Phone SIM (Device SIM)'
                           : (selectedCustomProviderName ?? 'Custom Provider'),
             ),
             trailing: const Icon(Icons.chevron_right),
@@ -810,14 +811,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.key, color: Colors.blue),
-            title: const Text('Swala SMS API Keys'),
-            subtitle: const Text('Configure swalasms.com API key & Sender ID'),
+            title: const Text('Cloud Sender ID & API Setup'),
+            subtitle: const Text(
+                'Configure your branded Sender ID & cloud credentials'),
             trailing: const Icon(Icons.chevron_right),
             onTap: _showSwalaSmsConfigDialog,
           ),
           ListTile(
             leading: const Icon(Icons.hub, color: Colors.indigo),
-            title: const Text('Gateway & Provider Manager'),
+            title: const Text('Gateway & Provider Manager (Admin)'),
             subtitle: const Text(
                 'Add, configure & test custom SMS and payment providers'),
             trailing: const Icon(Icons.chevron_right),
@@ -847,7 +849,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ListTile(
             leading:
                 const Icon(Icons.account_balance_wallet, color: Colors.teal),
-            title: const Text('Billing & Plans (Palm Pesa Tz)'),
+            title: const Text('Billing & Subscriptions (Mobile Money)'),
             subtitle: const Text('Subscribe, buy credits & collect payments'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {

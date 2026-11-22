@@ -112,7 +112,7 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-                'Native SIM SMS is only available on Android. Change channel to Swala SMS or QuickSMS in Settings.'),
+                'Device SIM SMS is only available on Android. Switch to Cloud Gateway mode in Settings to send directly from Web.'),
           ),
         );
       }
@@ -155,12 +155,8 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
       if (mounted) {
         setState(() => isLoading = false);
         final channelDisplayName = selectedChannel == 'thisPhone'
-            ? 'This Phone (SIM)'
-            : selectedChannel == 'swalaSMS'
-                ? 'Swala SMS (Tanzania)'
-                : selectedChannel == 'quickSMS'
-                    ? 'QuickSMS'
-                    : 'Custom Provider';
+            ? 'Local SIM Gateway (Device SIM)'
+            : 'Cloud Gateway (Branded Sender ID)';
 
         showDialog(
           context: context,
@@ -413,7 +409,7 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
                   if (!canSendSms) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Device SIM sending is Android only. Switch to Swala SMS or QuickSMS in Settings to send directly from Web.',
+                      'Device SIM sending is Android only. Switch to Cloud Gateway mode in Settings to send directly from Web.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Colors.orange.shade700,
                           ),

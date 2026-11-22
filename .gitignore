@@ -62,3 +62,9 @@ android/build/
 android/.gradle/
 android/.kotlin/
 /node_modules/
+
+# Secrets and OAuth credentials
+client_secret_*.json
+*.keystore
+key.properties
+
