@@ -1,5 +1,6 @@
 /// SMS Service - Handles SMS sending via QuickSMS API or Native Android SMS
 /// Provides automatic background SMS sending without user intervention
+library;
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;

@@ -1,6 +1,7 @@
 /// Settings Backup Service
 /// Handles synchronization of user and tenant settings between local (SharedPreferences)
 /// and remote (Supabase) storage for backup and cross-device sync
+library;
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';

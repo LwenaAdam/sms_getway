@@ -2,6 +2,7 @@
 /// Used on Web, iOS, and other non-Android platforms where native SMS is not available.
 /// SMS requests are queued in the database and processed by an Android device
 /// with the mobile app running and queue processing enabled.
+library;
 
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
