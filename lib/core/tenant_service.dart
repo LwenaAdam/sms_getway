@@ -304,13 +304,23 @@ class TenantService extends ChangeNotifier {
 
       // 4. Create membership in sms_gateway.tenant_members
       try {
-        await supabase.schema('sms_gateway').from('tenant_members').upsert({
-          'tenant_id': newTenantId,
-          'user_id': user.id,
-          'role': 'owner',
-        }, onConflict: 'tenant_id,user_id');
+        final existingMember = await supabase
+            .schema('sms_gateway')
+            .from('tenant_members')
+            .select('user_id')
+            .eq('tenant_id', newTenantId)
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+        if (existingMember == null) {
+          await supabase.schema('sms_gateway').from('tenant_members').insert({
+            'tenant_id': newTenantId,
+            'user_id': user.id,
+            'role': 'owner',
+          });
+        }
       } catch (e) {
-        debugPrint('⚠️ Non-blocking warning upserting tenant_members in autoProvision: $e');
+        debugPrint('⚠️ Non-blocking warning inserting tenant_members in autoProvision: $e');
       }
 
       // 5. Initialize user settings
@@ -345,13 +355,22 @@ class TenantService extends ChangeNotifier {
             .maybeSingle();
 
         if (productResponse != null && productResponse['id'] != null) {
-          await supabase.from('client_product_access').upsert({
-            'user_id': user.id,
-            'client_id': clientId,
-            'product_id': productResponse['id'],
-            'tenant_id': newTenantId,
-            'role': 'owner',
-          }, onConflict: 'user_id,tenant_id,product_id');
+          final existingAccess = await supabase
+              .from('client_product_access')
+              .select('id')
+              .eq('user_id', user.id)
+              .eq('tenant_id', newTenantId)
+              .maybeSingle();
+
+          if (existingAccess == null) {
+            await supabase.from('client_product_access').insert({
+              'user_id': user.id,
+              'client_id': clientId,
+              'product_id': productResponse['id'],
+              'tenant_id': newTenantId,
+              'role': 'owner',
+            });
+          }
         }
       } catch (_) {}
 

@@ -94,8 +94,8 @@ class PalmPesaService {
     if (['71', '65', '67'].contains(prefix)) return 'Tigo Pesa';
     // Airtel Money: 68, 69, 78
     if (['68', '69', '78'].contains(prefix)) return 'Airtel Money';
-    // HaloPesa: 62
-    if (['62'].contains(prefix)) return 'HaloPesa';
+    // HaloPesa: 61, 62
+    if (['61', '62'].contains(prefix)) return 'HaloPesa';
     return 'Mobile Money (TZ)';
   }
 
