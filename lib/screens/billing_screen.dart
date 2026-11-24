@@ -17,9 +17,10 @@ class _BillingScreenState extends State<BillingScreen> {
   final TenantService _tenantService = TenantService();
 
   bool _isLoading = true;
-  int _monthlySmsQuota = 1000;
-  int _dailySmsQuota = 100;
-  int _totalSmsSent = 0;
+  int _cloudSmsCredits = 1000;
+  int _cloudSmsSent = 0;
+  int _phoneSmsSent = 0;
+  final int _phoneFreeLimit = 100;
   String _planType = 'basic';
   List<Map<String, dynamic>> _transactions = [];
 
@@ -42,7 +43,7 @@ class _BillingScreenState extends State<BillingScreen> {
     try {
       final supabase = Supabase.instance.client;
 
-      // 1. Fetch tenant quota and settings
+      // 1. Fetch tenant quota and plan settings
       try {
         final settingsRes = await supabase
             .schema('sms_gateway')
@@ -52,25 +53,37 @@ class _BillingScreenState extends State<BillingScreen> {
             .maybeSingle();
 
         if (settingsRes != null) {
-          _monthlySmsQuota = (settingsRes['monthly_sms_quota'] as int?) ?? 1000;
-          _dailySmsQuota = (settingsRes['daily_sms_quota'] as int?) ?? 100;
+          _cloudSmsCredits =
+              (settingsRes['monthly_sms_quota'] as int?) ?? 1000;
           _planType = (settingsRes['plan_type'] as String?) ?? 'basic';
         }
       } catch (e) {
         debugPrint('⚠️ Error fetching tenant_settings: $e');
       }
 
-      // 2. Count SMS sent this month / overall for tenant
+      // 2. Count Phone SIM vs Cloud SMS logs
       try {
-        final sentCountRes = await supabase
+        final phoneSentRes = await supabase
             .schema('sms_gateway')
             .from('sms_logs')
             .select('id')
             .eq('tenant_id', tenantId)
+            .eq('status', 'sent')
+            .eq('channel', 'thisPhone')
             .count(CountOption.exact);
-        _totalSmsSent = sentCountRes.count;
+        _phoneSmsSent = phoneSentRes.count;
+
+        final cloudSentRes = await supabase
+            .schema('sms_gateway')
+            .from('sms_logs')
+            .select('id')
+            .eq('tenant_id', tenantId)
+            .eq('status', 'sent')
+            .neq('channel', 'thisPhone')
+            .count(CountOption.exact);
+        _cloudSmsSent = cloudSentRes.count;
       } catch (e) {
-        debugPrint('⚠️ Error counting sms_logs: $e');
+        debugPrint('⚠️ Error counting sms_logs by channel: $e');
       }
 
       // 3. Fetch transaction history from payments table
@@ -361,7 +374,7 @@ class _BillingScreenState extends State<BillingScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
               title: Row(
-              children: [
+                children: [
                   Icon(
                     status == 'completed'
                         ? Icons.check_circle
@@ -469,10 +482,11 @@ class _BillingScreenState extends State<BillingScreen> {
   @override
   Widget build(BuildContext context) {
     final tenantName = _tenantService.tenantName ?? 'Default Workspace';
-    final remainingSms = (_monthlySmsQuota - _totalSmsSent).clamp(0, 999999999);
-    final usagePercent = _monthlySmsQuota > 0
-        ? (_totalSmsSent / _monthlySmsQuota).clamp(0.0, 1.0)
-        : 0.0;
+    final remainingCloudCredits =
+        (_cloudSmsCredits - _cloudSmsSent).clamp(0, 999999999);
+    final isPaidGateway = _planType == 'starter' || _planType == 'pro';
+    final phoneUsagePercent =
+        (_phoneSmsSent / _phoneFreeLimit).clamp(0.0, 1.0);
 
     return Scaffold(
       appBar: AppBar(
@@ -510,7 +524,8 @@ class _BillingScreenState extends State<BillingScreen> {
                                 color: Colors.teal.withValues(alpha: 0.12),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.business, color: Colors.teal),
+                              child: const Icon(Icons.business,
+                                  color: Colors.teal),
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -526,13 +541,13 @@ class _BillingScreenState extends State<BillingScreen> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    'Plan: ${_planType.toUpperCase()}',
+                                    'Gateway Plan: ${_planType.toUpperCase()}',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: _planType == 'pro'
+                                      color: isPaidGateway
                                           ? Colors.teal
-                                          : Colors.blue,
+                                          : Colors.orange.shade800,
                                     ),
                                   ),
                                 ],
@@ -569,57 +584,73 @@ class _BillingScreenState extends State<BillingScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // SMS Consumption & Balance Dashboard Card
-                    _buildConsumptionCard(
-                      totalSent: _totalSmsSent,
-                      monthlyQuota: _monthlySmsQuota,
-                      remaining: remainingSms,
-                      usagePercent: usagePercent,
+                    // =========================================================
+                    // 1. CLOUD BULK SMS CARD (SENDER ID) - ZERO LIMITS
+                    // =========================================================
+                    _buildCloudBulkSmsCard(
+                      availableCredits: remainingCloudCredits,
+                      totalSent: _cloudSmsSent,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // =========================================================
+                    // 2. PHONE SIM GATEWAY CARD - LIMIT ENFORCEMENT
+                    // =========================================================
+                    _buildPhoneSimGatewayCard(
+                      isPaid: isPaidGateway,
+                      phoneSent: _phoneSmsSent,
+                      freeLimit: _phoneFreeLimit,
+                      usagePercent: phoneUsagePercent,
                     ),
                     const SizedBox(height: 24),
 
-                    // Pricing / Top-Up Plans Section
+                    // =========================================================
+                    // 3. PACKAGES (CLOUD TOP-UP & GATEWAY SUBSCRIPTION)
+                    // =========================================================
                     const Text(
-                      'Subscription & Top-Up Packages',
+                      'Subscription & Credit Packages',
                       style:
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Instant activation via Mobile Money (M-Pesa, Tigo Pesa, Airtel Money, HaloPesa).',
+                      'Pay instantly via Mobile Money (M-Pesa, Tigo Pesa, Airtel Money, HaloPesa).',
                       style: TextStyle(fontSize: 13, color: Colors.grey),
                     ),
                     const SizedBox(height: 16),
 
-                    // Plan Cards
+                    // Pay-As-You-Go Cloud SMS (No Limits)
                     _buildPlanCard(
                       title: 'SMS Credit Top-Up (1,000 SMS)',
                       price: '15,000 TZS',
                       period: 'one-time',
                       amount: 15000,
-                      badge: 'Pay-As-You-Go',
+                      badge: 'Pay-As-You-Go • No Limits',
                       isPopular: true,
                       features: [
                         '1,000 Cloud SMS Credits added instantly',
-                        'Sender ID: SMS_GATEWAY included',
-                        'No monthly expiration on purchased credits',
-                        'REST API & Web UI access',
+                        'Sender ID: SMS_GATEWAY (or your custom brand)',
+                        'NO daily limits — send 10 or 1,000 at once',
+                        'NO monthly expiration — just buy to use!',
+                        'REST API and Web Dashboard access',
                       ],
                       color: Colors.teal,
                     ),
                     const SizedBox(height: 14),
 
+                    // Phone SIM Gateway Subscriptions (Unlock unlimited device sending)
                     _buildPlanCard(
                       title: 'Starter Gateway',
                       price: '25,000 TZS',
                       period: '/ month',
                       amount: 25000,
-                      badge: 'For Small Shops',
+                      badge: 'Unlock Unlimited Phone SIM',
                       features: [
-                        'Unlimited SIM SMS from Android device',
+                        'UNLIMITED SIM SMS from your Android device',
+                        'Lifts the 100 free SMS limit on your phone',
                         'REST API Queue Access (/api/send)',
-                        '1,000 Contacts & Contact Groups',
-                        'Offline-first local synchronization',
+                        '1,000 Contacts & Groups sync',
+                        'Offline-first synchronization',
                       ],
                       color: Colors.blue,
                     ),
@@ -630,19 +661,21 @@ class _BillingScreenState extends State<BillingScreen> {
                       price: '50,000 TZS',
                       period: '/ month',
                       amount: 50000,
-                      badge: 'High Volume',
+                      badge: 'High Volume Gateway',
                       features: [
                         'Everything in Starter',
-                        '100,000 Monthly Cloud SMS Quota',
-                        'Custom Branded Sender ID support',
-                        'High-speed background queue & Webhooks',
+                        'UNLIMITED Phone SIM Gateway sending',
+                        'Custom Branded Sender ID registration support',
+                        'High-speed automated background queue',
                         'Unlimited Contacts & API Keys',
                       ],
                       color: Colors.purple,
                     ),
                     const SizedBox(height: 28),
 
-                    // Transaction History Section
+                    // =========================================================
+                    // 4. TRANSACTION HISTORY
+                    // =========================================================
                     _buildTransactionHistorySection(),
                     const SizedBox(height: 32),
                   ],
@@ -652,17 +685,15 @@ class _BillingScreenState extends State<BillingScreen> {
     );
   }
 
-  Widget _buildConsumptionCard({
+  Widget _buildCloudBulkSmsCard({
+    required int availableCredits,
     required int totalSent,
-    required int monthlyQuota,
-    required int remaining,
-    required double usagePercent,
   }) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: Colors.teal.withValues(alpha: 0.2)),
+        side: BorderSide(color: Colors.teal.withValues(alpha: 0.3)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -674,10 +705,10 @@ class _BillingScreenState extends State<BillingScreen> {
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.speed, color: Colors.teal, size: 22),
+                    Icon(Icons.cloud_done, color: Colors.teal, size: 24),
                     SizedBox(width: 8),
                     Text(
-                      'SMS Consumption & Quota',
+                      'Cloud Bulk SMS (Sender ID)',
                       style:
                           TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
@@ -690,9 +721,9 @@ class _BillingScreenState extends State<BillingScreen> {
                     color: Colors.teal.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    'Daily Limit: $_dailySmsQuota/day',
-                    style: const TextStyle(
+                  child: const Text(
+                    'No Limit • Just Buy to Use',
+                    style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: Colors.teal),
@@ -700,21 +731,26 @@ class _BillingScreenState extends State<BillingScreen> {
                 ),
               ],
             ),
-            const Divider(height: 24),
+            const SizedBox(height: 6),
+            const Text(
+              'Uses pre-approved Sender ID (SMS_GATEWAY). No daily limits or monthly expiration — simply buy credits to send.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const Divider(height: 22),
             Row(
               children: [
                 Expanded(
                   child: _buildMetricTile(
                     label: 'Available Credits',
-                    value: NumberFormat('#,###').format(monthlyQuota),
+                    value: NumberFormat('#,###').format(availableCredits),
                     unit: 'SMS',
-                    color: Colors.teal,
+                    color: availableCredits > 0 ? Colors.teal : Colors.red,
                   ),
                 ),
                 Container(height: 40, width: 1, color: Colors.grey.shade300),
                 Expanded(
                   child: _buildMetricTile(
-                    label: 'Sent / Consumed',
+                    label: 'Total Cloud Sent',
                     value: NumberFormat('#,###').format(totalSent),
                     unit: 'SMS',
                     color: Colors.blueGrey,
@@ -722,48 +758,208 @@ class _BillingScreenState extends State<BillingScreen> {
                 ),
                 Container(height: 40, width: 1, color: Colors.grey.shade300),
                 Expanded(
-                  child: _buildMetricTile(
-                    label: 'Remaining Balance',
-                    value: NumberFormat('#,###').format(remaining),
-                    unit: 'SMS',
-                    color: remaining > 0 ? Colors.green : Colors.red,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () {
+                      _openCheckoutDialog(
+                        planName: 'SMS Credit Top-Up (1,000 SMS)',
+                        amount: 15000,
+                        description:
+                            'Buy 1,000 Cloud SMS credits with Sender ID (SMS_GATEWAY)',
+                      );
+                    },
+                    child: const Text(
+                      'Top Up Credits',
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: usagePercent,
-                minHeight: 10,
-                backgroundColor: Colors.grey.shade200,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  usagePercent > 0.9
-                      ? Colors.red
-                      : usagePercent > 0.7
-                          ? Colors.orange
-                          : Colors.teal,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhoneSimGatewayCard({
+    required bool isPaid,
+    required int phoneSent,
+    required int freeLimit,
+    required double usagePercent,
+  }) {
+    final hasReachedLimit = !isPaid && phoneSent >= freeLimit;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(
+          color: hasReachedLimit
+              ? Colors.red.withValues(alpha: 0.4)
+              : isPaid
+                  ? Colors.blue.withValues(alpha: 0.3)
+                  : Colors.orange.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  '${(usagePercent * 100).toStringAsFixed(1)}% of quota used',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.sim_card,
+                      color: hasReachedLimit
+                          ? Colors.red
+                          : isPaid
+                              ? Colors.blue
+                              : Colors.orange,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Device SIM Gateway (Phone)',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ),
-                Text(
-                  '${NumberFormat('#,###').format(remaining)} SMS remaining',
-                  style: const TextStyle(
-                      fontSize: 12,
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isPaid
+                        ? Colors.blue.withValues(alpha: 0.1)
+                        : hasReachedLimit
+                            ? Colors.red.withValues(alpha: 0.1)
+                            : Colors.orange.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    isPaid
+                        ? 'Unlimited SIM Sending'
+                        : hasReachedLimit
+                            ? 'Limit Reached'
+                            : 'Free Trial: $freeLimit SMS Limit',
+                    style: TextStyle(
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: Colors.teal),
+                      color: isPaid
+                          ? Colors.blue
+                          : hasReachedLimit
+                              ? Colors.red
+                              : Colors.orange.shade800,
+                    ),
+                  ),
                 ),
               ],
             ),
+            const SizedBox(height: 6),
+            Text(
+              isPaid
+                  ? 'Your Android device is registered as an active Gateway with unlimited SIM sending.'
+                  : 'Customer must pay once $freeLimit SMS is reached to continue using their phone as an SMS Gateway.',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const Divider(height: 22),
+            if (isPaid) ...[
+              Row(
+                children: [
+                  const Icon(Icons.verified, color: Colors.blue, size: 28),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Status: Gateway License Active (${_planType.toUpperCase()})',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        Text(
+                          '$phoneSent total SMS sent from your phone SIM card.',
+                          style:
+                              const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ] else ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Phone SMS Used: $phoneSent / $freeLimit',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: hasReachedLimit ? Colors.red : Colors.black87,
+                    ),
+                  ),
+                  Text(
+                    hasReachedLimit
+                        ? '0 Remaining (Upgrade Required)'
+                        : '${freeLimit - phoneSent} Free Remaining',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: hasReachedLimit ? Colors.red : Colors.teal,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: usagePercent,
+                  minHeight: 8,
+                  backgroundColor: Colors.grey.shade200,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    hasReachedLimit ? Colors.red : Colors.orange,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.blue,
+                    side: const BorderSide(color: Colors.blue),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () {
+                    _openCheckoutDialog(
+                      planName: 'Starter Gateway',
+                      amount: 25000,
+                      description:
+                          'Unlock unlimited Phone SIM Gateway sending for 25,000 TZS/month',
+                    );
+                  },
+                  icon: const Icon(Icons.upgrade, size: 18),
+                  label: const Text(
+                    'Unlock Unlimited Phone SIM (25,000 TZS/mo)',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -875,7 +1071,8 @@ class _BillingScreenState extends State<BillingScreen> {
             separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final tx = _transactions[index];
-              final status = (tx['status'] ?? 'pending').toString().toLowerCase();
+              final status =
+                  (tx['status'] ?? 'pending').toString().toLowerCase();
               final amount = tx['amount'];
               final currency = tx['currency'] ?? 'TZS';
               final planName = tx['plan_name'] ?? 'SMS Plan Top-Up';

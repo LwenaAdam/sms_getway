@@ -12,6 +12,7 @@ import '../contacts/contact_model.dart';
 import '../groups/group_model.dart';
 import 'marketing/campaign_list_screen.dart';
 import 'download_app_banner.dart';
+import 'billing_screen.dart';
 
 class BulkSmsScreen extends StatefulWidget {
   final VoidCallback? onNavigateToLogs;
@@ -129,6 +130,88 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
         throw 'No tenant selected';
       }
 
+      final supabase = Supabase.instance.client;
+
+      // =========================================================================
+      // BUSINESS MODEL CHECK:
+      // 1. Phone SIM Gateway ("thisPhone"):
+      //    Limited to 100 free SMS for basic tier. Customer must subscribe
+      //    (Starter 25k/mo or Pro 50k/mo) to unlock unlimited device SIM sending.
+      // 2. Cloud Bulk SMS with Sender ID ("swalaSMS"):
+      //    NO daily or monthly limits! Pure pay-as-you-go: just buy credits to use.
+      // =========================================================================
+      if (selectedChannel == 'thisPhone') {
+        try {
+          final settingsRes = await supabase
+              .schema('sms_gateway')
+              .from('tenant_settings')
+              .select('plan_type')
+              .eq('tenant_id', tenantId)
+              .maybeSingle();
+
+          final planType = (settingsRes?['plan_type'] as String?) ?? 'basic';
+          if (planType == 'basic') {
+            final countRes = await supabase
+                .schema('sms_gateway')
+                .from('sms_logs')
+                .select('id')
+                .eq('tenant_id', tenantId)
+                .eq('status', 'sent')
+                .eq('channel', 'thisPhone')
+                .count(CountOption.exact);
+
+            final int phoneSent = countRes.count;
+            const int freePhoneLimit = 100;
+
+            if (phoneSent >= freePhoneLimit) {
+              if (mounted) {
+                setState(() => isLoading = false);
+                _showPhoneLimitReachedDialog(phoneSent, freePhoneLimit);
+              }
+              return;
+            }
+          }
+        } catch (e) {
+          debugPrint('⚠️ Error verifying phone SIM limit: $e');
+        }
+      } else {
+        // Cloud Bulk SMS (Sender ID) - Just check credit balance (no limit!)
+        try {
+          final settingsRes = await supabase
+              .schema('sms_gateway')
+              .from('tenant_settings')
+              .select('monthly_sms_quota')
+              .eq('tenant_id', tenantId)
+              .maybeSingle();
+
+          final int totalCredits =
+              (settingsRes?['monthly_sms_quota'] as int?) ?? 1000;
+
+          final countRes = await supabase
+              .schema('sms_gateway')
+              .from('sms_logs')
+              .select('id')
+              .eq('tenant_id', tenantId)
+              .eq('status', 'sent')
+              .neq('channel', 'thisPhone')
+              .count(CountOption.exact);
+
+          final int cloudSent = countRes.count;
+          final int availableCredits =
+              (totalCredits - cloudSent).clamp(0, 999999999);
+
+          if (availableCredits < recipients.length) {
+            if (mounted) {
+              setState(() => isLoading = false);
+              _showInsufficientCreditsDialog(availableCredits, recipients.length);
+            }
+            return;
+          }
+        } catch (e) {
+          debugPrint('⚠️ Error verifying cloud credits: $e');
+        }
+      }
+
       // Android SIM platform - Request SMS permission for "This Phone" channel
       if (selectedChannel == 'thisPhone') {
         final status = await Permission.sms.request();
@@ -225,6 +308,117 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
       }
       debugPrint('❌ Error sending SMS: $e');
     }
+  }
+
+  void _showPhoneLimitReachedDialog(int used, int limit) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.phone_locked, color: Colors.orange, size: 28),
+            SizedBox(width: 8),
+            Text('SIM Limit Reached'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'You have sent $used free SMS through your device SIM (free limit: $limit).',
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'To continue sending unlimited SMS directly from your Android phone SIM card, please upgrade to a Gateway subscription (Starter Gateway 25,000 TZS/month).\n\nAlternatively, you can switch to Cloud Gateway to send Bulk SMS with a Sender ID.',
+              style: TextStyle(fontSize: 13, color: Colors.black87),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() => currentChannel = 'swalaSMS');
+              SharedPreferences.getInstance().then((p) => p.setString('sms_channel', 'swalaSMS'));
+            },
+            child: const Text('Use Cloud Gateway'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BillingScreen()),
+              );
+            },
+            child: const Text('Upgrade Plan (25,000 TZS)'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showInsufficientCreditsDialog(int available, int required) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.credit_card_off, color: Colors.teal, size: 28),
+            SizedBox(width: 8),
+            Text('SMS Credits Needed'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'You have $available Cloud SMS credits, but you selected $required recipients.',
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Bulk SMS with Sender ID has NO monthly restrictions or daily limits — just buy credits to use!',
+              style: TextStyle(fontSize: 13, color: Colors.black87),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Top up 1,000 SMS for 15,000 TZS via Mobile Money and send instantly.',
+              style: TextStyle(fontSize: 12, color: Colors.teal, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BillingScreen()),
+              );
+            },
+            child: const Text('Top Up Credits (15,000 TZS)'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

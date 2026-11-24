@@ -116,6 +116,7 @@ class SmsService {
           tenantId: tenantId,
           status: AppConstants.smsSent,
           errorMessage: null,
+          channel: 'swalaSMS',
         );
 
         debugPrint('✅ SMS sent successfully via SwalaSMS');
@@ -140,6 +141,7 @@ class SmsService {
         tenantId: tenantId,
         status: AppConstants.smsFailed,
         errorMessage: e.toString(),
+        channel: 'swalaSMS',
       );
 
       return false;
@@ -243,6 +245,7 @@ class SmsService {
           tenantId: tenantId,
           status: AppConstants.smsSent,
           errorMessage: null,
+          channel: 'thisPhone',
         );
 
         debugPrint('✅ SMS sent successfully via Native Android');
@@ -256,6 +259,7 @@ class SmsService {
           tenantId: tenantId,
           status: AppConstants.smsFailed,
           errorMessage: 'Native Android SMS sending failed',
+          channel: 'thisPhone',
         );
 
         debugPrint('❌ Failed to send SMS via Native Android');
@@ -272,6 +276,7 @@ class SmsService {
         tenantId: tenantId,
         status: AppConstants.smsFailed,
         errorMessage: e.toString(),
+        channel: 'thisPhone',
       );
 
       return false;
@@ -422,6 +427,7 @@ class SmsService {
     required String? tenantId,
     required String status,
     required String? errorMessage,
+    String? channel,
   }) async {
     try {
       final supabase = Supabase.instance.client;
@@ -436,6 +442,7 @@ class SmsService {
         status: status,
         sentAt: DateTime.now(),
         errorMessage: errorMessage,
+        channel: channel,
         createdAt: DateTime.now(),
       );
 
@@ -444,7 +451,7 @@ class SmsService {
           .from('sms_logs')
           .insert(smsLog.toJson());
 
-      debugPrint('📝 SMS logged to database');
+      debugPrint('📝 SMS logged to database ($channel)');
     } catch (e) {
       debugPrint('❌ Error logging SMS: $e');
     }
