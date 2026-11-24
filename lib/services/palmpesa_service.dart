@@ -241,6 +241,7 @@ class PalmPesaService {
         final status = (data['data']?['status'] ?? data['status'] ?? '').toString().toUpperCase();
         if (status == 'COMPLETED' || status == 'SUCCESS') {
           await _updatePaymentStatus(transactionId, 'completed');
+          await creditQuotaForPayment(transactionId);
           return 'completed';
         } else if (status.contains('FAIL') || status.contains('CANCEL') || status.contains('REJECT')) {
           await _updatePaymentStatus(transactionId, 'failed');
@@ -251,6 +252,96 @@ class PalmPesaService {
     } catch (e) {
       debugPrint('⚠️ [PalmPesa] Status check failed: $e');
       return 'pending';
+    }
+  }
+
+  /// Automatically credit SMS quota or activate subscription plan upon successful payment
+  Future<void> creditQuotaForPayment(String transactionId) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final payment = await supabase
+          .schema('sms_gateway')
+          .from('payments')
+          .select('tenant_id, plan_name, amount, metadata')
+          .eq('transaction_id', transactionId)
+          .maybeSingle();
+
+      if (payment == null || payment['tenant_id'] == null) return;
+
+      final metadata = payment['metadata'] is Map
+          ? Map<String, dynamic>.from(payment['metadata'])
+          : <String, dynamic>{};
+
+      if (metadata['credited'] == true) {
+        debugPrint('ℹ️ [PalmPesa] Transaction $transactionId already credited.');
+        return;
+      }
+
+      final tenantId = payment['tenant_id'] as String;
+      final planName = (payment['plan_name'] ?? '').toString().toLowerCase();
+
+      // Read current tenant settings
+      final settings = await supabase
+          .schema('sms_gateway')
+          .from('tenant_settings')
+          .select('monthly_sms_quota, daily_sms_quota, plan_type')
+          .eq('tenant_id', tenantId)
+          .maybeSingle();
+
+      int currentMonthlyQuota = settings?['monthly_sms_quota'] as int? ?? 1000;
+      int currentDailyQuota = settings?['daily_sms_quota'] as int? ?? 100;
+      String newPlanType = settings?['plan_type'] as String? ?? 'basic';
+
+      if (planName.contains('1,000') ||
+          planName.contains('top-up') ||
+          planName.contains('credit')) {
+        currentMonthlyQuota += 1000;
+        currentDailyQuota = currentDailyQuota < 500 ? 500 : currentDailyQuota;
+      } else if (planName.contains('starter')) {
+        newPlanType = 'starter';
+        currentMonthlyQuota = currentMonthlyQuota < 25000 ? 25000 : currentMonthlyQuota + 25000;
+        currentDailyQuota = currentDailyQuota < 1000 ? 1000 : currentDailyQuota;
+      } else if (planName.contains('business') || planName.contains('pro')) {
+        newPlanType = 'pro';
+        currentMonthlyQuota = currentMonthlyQuota < 100000 ? 100000 : currentMonthlyQuota + 100000;
+        currentDailyQuota = currentDailyQuota < 5000 ? 5000 : currentDailyQuota;
+      } else {
+        currentMonthlyQuota += 1000;
+      }
+
+      if (settings != null) {
+        await supabase.schema('sms_gateway').from('tenant_settings').update({
+          'monthly_sms_quota': currentMonthlyQuota,
+          'daily_sms_quota': currentDailyQuota,
+          'plan_type': newPlanType,
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('tenant_id', tenantId);
+      } else {
+        await supabase.schema('sms_gateway').from('tenant_settings').insert({
+          'tenant_id': tenantId,
+          'default_sms_channel': 'swalaSMS',
+          'daily_sms_quota': currentDailyQuota,
+          'monthly_sms_quota': currentMonthlyQuota,
+          'plan_type': newPlanType,
+          'enable_bulk_sms': true,
+        });
+      }
+
+      // Mark payment as credited in metadata
+      metadata['credited'] = true;
+      metadata['credited_at'] = DateTime.now().toIso8601String();
+      metadata['new_monthly_quota'] = currentMonthlyQuota;
+      metadata['new_plan_type'] = newPlanType;
+
+      await supabase
+          .schema('sms_gateway')
+          .from('payments')
+          .update({'metadata': metadata})
+          .eq('transaction_id', transactionId);
+
+      debugPrint('🎉 [PalmPesa] Quota credited successfully! New Monthly Quota: $currentMonthlyQuota ($newPlanType)');
+    } catch (e) {
+      debugPrint('⚠️ [PalmPesa] Error crediting quota: $e');
     }
   }
 

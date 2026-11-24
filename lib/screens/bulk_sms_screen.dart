@@ -42,7 +42,8 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
   void _loadData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final channel = prefs.getString('sms_channel') ?? 'thisPhone';
+      const defaultChannel = kIsWeb ? 'swalaSMS' : 'thisPhone';
+      final channel = prefs.getString('sms_channel') ?? defaultChannel;
 
       // Load from local database (offline-first)
       final contacts = await LocalDataService().getContacts();
@@ -103,7 +104,8 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
 
     // Load selected SMS channel from SharedPreferences
     final prefs = await SharedPreferences.getInstance();
-    final selectedChannel = prefs.getString('sms_channel') ?? 'thisPhone';
+    const defaultChannel = kIsWeb ? 'swalaSMS' : 'thisPhone';
+    final selectedChannel = prefs.getString('sms_channel') ?? defaultChannel;
     debugPrint('📱 Using SMS Channel: $selectedChannel');
 
     final bool isAndroid = !kIsWeb && Platform.isAndroid;
@@ -260,6 +262,65 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
                     ),
                   ),
                   const SizedBox(height: AppTheme.paddingSmall),
+
+                  // Sender ID and Channel Info Card
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: currentChannel == 'thisPhone'
+                          ? Colors.blue.withValues(alpha: 0.08)
+                          : Colors.teal.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: currentChannel == 'thisPhone'
+                            ? Colors.blue.withValues(alpha: 0.3)
+                            : Colors.teal.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          currentChannel == 'thisPhone'
+                              ? Icons.sim_card
+                              : Icons.cloud_done,
+                          color: currentChannel == 'thisPhone'
+                              ? Colors.blue
+                              : Colors.teal,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                currentChannel == 'thisPhone'
+                                    ? 'Sending via: Android Device SIM'
+                                    : 'Sending via: Cloud Gateway',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                currentChannel == 'thisPhone'
+                                    ? 'Sender: Your SIM Phone Number (Uses phone bundle • Zero registration required)'
+                                    : 'Sender ID: SMS_GATEWAY (Pre-approved default shared Sender ID • Instant sending without user registration)',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                   // Mode selector
                   Text(
                     'Mode',

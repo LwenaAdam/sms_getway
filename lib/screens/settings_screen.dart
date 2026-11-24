@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -59,7 +60,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _loadChannelPreference() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final savedChannel = prefs.getString('sms_channel') ?? 'thisPhone';
+      const defaultChannel = kIsWeb ? 'swalaSMS' : 'thisPhone';
+      final savedChannel = prefs.getString('sms_channel') ?? defaultChannel;
       selectedChannelRaw = savedChannel;
 
       if (savedChannel == 'quickSMS') {

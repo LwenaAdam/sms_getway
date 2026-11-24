@@ -51,10 +51,11 @@ class SmsService {
   static Future<String> getSelectedChannel() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getString(_channelKey) ?? 'thisPhone';
+      const defaultChannel = kIsWeb ? 'swalaSMS' : 'thisPhone';
+      return prefs.getString(_channelKey) ?? defaultChannel;
     } catch (e) {
       debugPrint('❌ Error loading channel: $e');
-      return 'thisPhone';
+      return kIsWeb ? 'swalaSMS' : 'thisPhone';
     }
   }
 

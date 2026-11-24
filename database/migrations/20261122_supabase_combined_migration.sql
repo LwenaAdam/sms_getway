@@ -84,6 +84,24 @@ WITH CHECK (
     OR user_id = auth.uid()
 );
 
+DROP POLICY IF EXISTS "Users can update tenant payments" ON sms_gateway.payments;
+CREATE POLICY "Users can update tenant payments"
+ON sms_gateway.payments
+FOR UPDATE
+TO authenticated
+USING (
+    tenant_id IN (
+        SELECT tenant_id 
+        FROM sms_gateway.tenant_members 
+        WHERE user_id = auth.uid()
+        UNION
+        SELECT tenant_id
+        FROM sms_gateway.users
+        WHERE id = auth.uid()
+    )
+    OR user_id = auth.uid()
+);
+
 DROP POLICY IF EXISTS "Service role full access on payments" ON sms_gateway.payments;
 CREATE POLICY "Service role full access on payments"
 ON sms_gateway.payments
