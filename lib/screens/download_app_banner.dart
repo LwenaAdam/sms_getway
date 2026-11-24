@@ -28,6 +28,70 @@ class _DownloadAppBannerState extends State<DownloadAppBanner> {
     }
   }
 
+  void _showInstallHelpDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.shield_outlined, color: AppTheme.primaryColor),
+            SizedBox(width: 8),
+            Text('Android Install Guide', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Because this APK is downloaded directly from the browser, Google Play Protect may show a prompt on first install:',
+              style: TextStyle(fontSize: 14),
+            ),
+            SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('1. ', style: TextStyle(fontWeight: FontWeight.bold)),
+                Expanded(child: Text('Tap "More details" (or "Maelezo zaidi").')),
+              ],
+            ),
+            SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('2. ', style: TextStyle(fontWeight: FontWeight.bold)),
+                Expanded(child: Text('Tap "Install anyway" (or "Sakinisha hata hivyo").')),
+              ],
+            ),
+            SizedBox(height: 12),
+            Text(
+              'SMS Gateway Pro is safely signed by TechWare Africa and uses your device SIM only when you trigger SMS sending.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _launchURL();
+            },
+            icon: const Icon(Icons.download, size: 16),
+            label: const Text('Download APK'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Only show on web
@@ -85,6 +149,12 @@ class _DownloadAppBannerState extends State<DownloadAppBanner> {
             ),
           ),
           const SizedBox(width: 8),
+          IconButton(
+            onPressed: () => _showInstallHelpDialog(context),
+            icon: const Icon(Icons.help_outline, color: Colors.white70, size: 20),
+            tooltip: 'Install Guide (Play Protect)',
+          ),
+          const SizedBox(width: 4),
           ElevatedButton.icon(
             onPressed: _launchURL,
             icon: const Icon(Icons.download, size: 16),

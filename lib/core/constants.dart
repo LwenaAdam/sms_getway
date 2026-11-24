@@ -127,8 +127,6 @@ class DeviceConstants {
   // ===== PERMISSIONS =====
   static const List<String> requiredPermissions = [
     'android.permission.SEND_SMS',
-    'android.permission.READ_SMS',
-    'android.permission.RECEIVE_SMS',
     'android.permission.READ_PHONE_STATE',
     'android.permission.INTERNET',
   ];

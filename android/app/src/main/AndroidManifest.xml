@@ -1,9 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     
-    <!-- SMS Permissions -->
+    <!-- SMS Permissions - Outbound Gateway Only -->
     <uses-permission android:name="android.permission.SEND_SMS" />
-    <uses-permission android:name="android.permission.READ_SMS" />
-    <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     
     <!-- Contacts Permission for Phonebook Sync -->
@@ -16,8 +14,9 @@
     <!-- Internet Permission -->
     <uses-permission android:name="android.permission.INTERNET" />
     
-    <!-- Foreground Service Permission (Android 9+) -->
+    <!-- Foreground Service Permission (Android 9+ and Android 14+ DataSync) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     
     <application
         android:label="SMS Gateway Pro"
