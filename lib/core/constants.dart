@@ -47,7 +47,7 @@ class AppConstants {
   static const String swalaSmsBaseUrl = 'https://swalasms.com/api/v1';
   static const String swalaSmsApiKey = String.fromEnvironment(
     'SWALA_SMS_API_KEY',
-    defaultValue: 'swl_live_k37GMOgUEe492O9IZYKjQgRUjPXolHaZOpaEFAIufEFe4T4P',
+    defaultValue: '',
   );
   static const String swalaSmsSenderId = String.fromEnvironment(
     'SWALA_SMS_SENDER_ID',
@@ -61,11 +61,11 @@ class AppConstants {
   );
   static const String palmPesaUserRef = String.fromEnvironment(
     'PALMPESA_USER_REF',
-    defaultValue: 'USR-579470B9AB51',
+    defaultValue: '',
   );
   static const String palmPesaApiToken = String.fromEnvironment(
     'PALMPESA_API_TOKEN',
-    defaultValue: '2RvbgThtkh12Agm9oC8Otn8zig7th2FtUk42tYexXWkFeQxkJWVIMyFqgn7v',
+    defaultValue: '',
   );
 
   // ===== RATE LIMITING =====

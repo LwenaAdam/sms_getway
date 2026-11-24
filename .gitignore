@@ -66,5 +66,7 @@ android/.kotlin/
 # Secrets and OAuth credentials
 client_secret_*.json
 *.keystore
+*.jks
 key.properties
+*.pem
 
