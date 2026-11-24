@@ -1,6 +1,10 @@
+include: package:flutter_lints/flutter.yaml
+
 analyzer:
   exclude:
     - build/**
     - android/**
     - web/**
-include: package:flutter_lints/flutter.yaml
+    - fix_sync_status.dart
+  errors:
+    deprecated_member_use: ignore

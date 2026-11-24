@@ -136,7 +136,7 @@ class _ProviderManagementScreenState extends State<ProviderManagementScreen>
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          value: authType,
+                          initialValue: authType,
                           decoration: const InputDecoration(labelText: 'Auth Type', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'bearer', child: Text('Bearer Token')),
@@ -150,7 +150,7 @@ class _ProviderManagementScreenState extends State<ProviderManagementScreen>
                       const SizedBox(width: 10),
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          value: httpMethod,
+                          initialValue: httpMethod,
                           decoration: const InputDecoration(labelText: 'Method', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'POST', child: Text('POST')),
@@ -325,7 +325,7 @@ class _ProviderManagementScreenState extends State<ProviderManagementScreen>
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          value: paymentType,
+                          initialValue: paymentType,
                           decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
                           items: const [
                             DropdownMenuItem(value: 'mobile_money_ussd', child: Text('USSD Push (Mobile Money)')),
@@ -418,15 +418,14 @@ class _ProviderManagementScreenState extends State<ProviderManagementScreen>
                       );
                       setModalState(() => isTesting = false);
 
-                      if (ctx.mounted && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(result.message),
-                            backgroundColor: result.success ? Colors.green : Colors.red,
-                          ),
-                        );
-                        if (result.success) Navigator.pop(ctx);
-                      }
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(result.message),
+                          backgroundColor: result.success ? Colors.green : Colors.red,
+                        ),
+                      );
+                      if (result.success && ctx.mounted) Navigator.pop(ctx);
                     },
               child: isTesting ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Send Test SMS'),
             ),

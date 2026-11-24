@@ -1348,14 +1348,14 @@ class _ContactsScreenState extends State<ContactsScreen>
                 color: Colors.blue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Row(
+              child: const Row(
                 children: [
-                  const Icon(Icons.info, color: Colors.blue, size: 20),
-                  const SizedBox(width: 8),
+                  Icon(Icons.info, color: Colors.blue, size: 20),
+                  SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Numbers will be converted to international format ($_defaultCountryCode)',
-                      style: const TextStyle(color: Colors.blue, fontSize: 12),
+                      style: TextStyle(color: Colors.blue, fontSize: 12),
                     ),
                   ),
                 ],
