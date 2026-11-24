@@ -12,6 +12,7 @@ import 'package:uuid/uuid.dart';
 import '../core/constants.dart';
 import '../core/tenant_service.dart';
 import 'sms_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 /// Model for SMS Request from API queue
 class SmsRequest {
@@ -150,15 +151,25 @@ class ApiSmsQueueService extends ChangeNotifier {
   // ============================================================================
 
   /// Start the queue processing service
-  Future<void> start() async {
+  Future<bool> start() async {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
       debugPrint('⚠️ API SMS Queue Service is Android-only');
-      return;
+      return false;
     }
 
     if (_isEnabled) {
       debugPrint('⚠️ API SMS Queue Service already running');
-      return;
+      return true;
+    }
+
+    // Proactively verify SMS permission before starting background worker
+    final status = await Permission.sms.status;
+    if (!status.isGranted) {
+      final requested = await Permission.sms.request();
+      if (!requested.isGranted) {
+        debugPrint('❌ Cannot start API SMS Queue Service: SMS permission denied by user');
+        return false;
+      }
     }
 
     debugPrint('🚀 Starting API SMS Queue Service...');
@@ -180,6 +191,7 @@ class ApiSmsQueueService extends ChangeNotifier {
 
     notifyListeners();
     debugPrint('✅ API SMS Queue Service started - polling every 30s');
+    return true;
   }
 
   /// Stop the queue processing service

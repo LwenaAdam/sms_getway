@@ -13,6 +13,7 @@ import '../sms/sms_log_model.dart';
 import '../api/native_sms_service.dart';
 import '../models/provider_models.dart';
 import 'provider_manager_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class SmsService {
   static const String _channelKey = 'sms_channel';
@@ -229,6 +230,27 @@ class SmsService {
   }) async {
     try {
       debugPrint('📱 Sending SMS via Native Android to: $phoneNumber');
+
+      // Proactively ensure SMS permission is granted on Android
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        final perm = await Permission.sms.status;
+        if (!perm.isGranted) {
+          final requested = await Permission.sms.request();
+          if (!requested.isGranted) {
+            debugPrint('❌ Native Android SMS Error: SMS permission denied by user');
+            await _logSmsToDatabase(
+              phoneNumber: phoneNumber,
+              message: message,
+              userId: userId,
+              tenantId: tenantId,
+              status: AppConstants.smsFailed,
+              errorMessage: 'SMS permission denied by user',
+              channel: 'thisPhone',
+            );
+            return false;
+          }
+        }
+      }
 
       // Use the NativeSmsService to send SMS via Android platform channel
       final success = await NativeSmsService.sendSms(

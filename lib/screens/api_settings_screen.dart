@@ -435,7 +435,17 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen>
                     return ElevatedButton.icon(
                       onPressed: _queueService.isEnabled
                           ? _queueService.stop
-                          : _queueService.start,
+                          : () async {
+                              final started = await _queueService.start();
+                              if (!started && context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Cannot start queue: SMS permission is required on this device'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            },
                       icon: Icon(
                         _queueService.isEnabled ? Icons.stop : Icons.play_arrow,
                       ),

@@ -22,6 +22,7 @@ import 'screens/billing_screen.dart';
 import 'services/provider_manager_service.dart';
 import 'widgets/google_sign_in_button.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -716,6 +717,31 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadData();
+    _checkAndPromptSmsPermissionOnLaunch();
+  }
+
+  /// Proactively prompt for SMS & Phone permissions on launch for Android Gateway
+  Future<void> _checkAndPromptSmsPermissionOnLaunch() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+
+    try {
+      // Delay slightly until UI has stabilized
+      await Future.delayed(const Duration(milliseconds: 700));
+      if (!mounted) return;
+
+      final smsStatus = await Permission.sms.status;
+      if (!smsStatus.isGranted) {
+        debugPrint('📱 App Launch: Requesting SMS permission for Gateway functionality...');
+        await Permission.sms.request();
+      }
+
+      final phoneStatus = await Permission.phone.status;
+      if (!phoneStatus.isGranted) {
+        await Permission.phone.request();
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error requesting permissions on launch: $e');
+    }
   }
 
   void _loadData() async {
@@ -853,6 +879,16 @@ class _HomePageState extends State<HomePage> {
       final autoStart = prefs.getBool('api_queue_auto_start') ?? false;
 
       if (autoStart) {
+        if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+          final status = await Permission.sms.status;
+          if (!status.isGranted) {
+            final req = await Permission.sms.request();
+            if (!req.isGranted) {
+              debugPrint('⚠️ Auto-start API Queue skipped: SMS permission not granted');
+              return;
+            }
+          }
+        }
         final queueService = ApiSmsQueueService();
         if (!queueService.isEnabled) {
           await queueService.start();

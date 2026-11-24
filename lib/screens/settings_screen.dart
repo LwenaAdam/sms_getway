@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../core/theme.dart';
 import '../core/theme_provider.dart';
 import '../core/tenant_service.dart';
@@ -123,6 +124,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _saveRawChannelPreference(String channelRaw, String displayName) async {
     try {
+      // If switching to thisPhone SIM on Android, verify SMS permission immediately
+      if (channelRaw == 'thisPhone' && !kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        final status = await Permission.sms.status;
+        if (!status.isGranted) {
+          final requested = await Permission.sms.request();
+          if (!requested.isGranted && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('SMS permission is required to send via Local Phone SIM'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        }
+      }
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('sms_channel', channelRaw);
       setState(() {
@@ -156,6 +173,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _saveAutoStartPreference(bool value) async {
     try {
+      // If turning ON auto-start on Android, ensure SMS permission is granted
+      if (value && !kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        final status = await Permission.sms.status;
+        if (!status.isGranted) {
+          final requested = await Permission.sms.request();
+          if (!requested.isGranted) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('SMS permission is required to auto-start queue processing on this phone'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
+        }
+      }
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('api_queue_auto_start', value);
       setState(() {

@@ -59,6 +59,15 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
           isLoadingContacts = false;
         });
       }
+
+      // Proactively prompt for SMS permission if channel is thisPhone on Android
+      if (channel == 'thisPhone' && !kIsWeb && Platform.isAndroid) {
+        final status = await Permission.sms.status;
+        if (!status.isGranted) {
+          debugPrint('📱 Bulk SMS Screen: Proactively requesting SMS permission for thisPhone...');
+          await Permission.sms.request();
+        }
+      }
     } catch (e) {
       if (mounted) {
         setState(() => isLoadingContacts = false);
