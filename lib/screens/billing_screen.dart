@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/tenant_service.dart';
 import '../services/palmpesa_service.dart';
+import '../widgets/sender_id_dialog.dart';
 
 class BillingScreen extends StatefulWidget {
   const BillingScreen({super.key});
@@ -782,6 +783,27 @@ class _BillingScreenState extends State<BillingScreen> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: () => showSenderIdRequestDialog(context,
+                  onUpdated: _loadBillingData),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.badge, size: 14, color: Colors.teal.shade800),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Want your own brand name as Sender ID? Request custom Sender ID',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.teal.shade800,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

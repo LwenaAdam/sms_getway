@@ -196,3 +196,70 @@ FOR ALL
 TO service_role
 USING (true)
 WITH CHECK (true);
+
+-- ------------------------------------------------------------
+-- 4. CREATE SENDER ID REQUESTS TABLE
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sms_gateway.sender_id_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES sms_gateway.tenants(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    sender_id VARCHAR(11) NOT NULL,
+    business_name TEXT NOT NULL,
+    purpose TEXT NOT NULL,
+    contact_phone VARCHAR(30) NOT NULL,
+    status VARCHAR(30) NOT NULL DEFAULT 'pending',
+    rejection_reason TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sender_id_requests_tenant ON sms_gateway.sender_id_requests(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_sender_id_requests_status ON sms_gateway.sender_id_requests(status);
+
+ALTER TABLE sms_gateway.sender_id_requests ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their tenant sender_id_requests" ON sms_gateway.sender_id_requests;
+CREATE POLICY "Users can view their tenant sender_id_requests"
+ON sms_gateway.sender_id_requests
+FOR SELECT
+TO authenticated
+USING (
+    tenant_id IN (
+        SELECT tenant_id 
+        FROM sms_gateway.tenant_members 
+        WHERE user_id = auth.uid()
+        UNION
+        SELECT tenant_id
+        FROM sms_gateway.users
+        WHERE id = auth.uid()
+    )
+    OR user_id = auth.uid()
+);
+
+DROP POLICY IF EXISTS "Users can insert sender_id_requests" ON sms_gateway.sender_id_requests;
+CREATE POLICY "Users can insert sender_id_requests"
+ON sms_gateway.sender_id_requests
+FOR INSERT
+TO authenticated
+WITH CHECK (
+    tenant_id IN (
+        SELECT tenant_id 
+        FROM sms_gateway.tenant_members 
+        WHERE user_id = auth.uid()
+        UNION
+        SELECT tenant_id
+        FROM sms_gateway.users
+        WHERE id = auth.uid()
+    )
+    OR user_id = auth.uid()
+);
+
+DROP POLICY IF EXISTS "Service role full access on sender_id_requests" ON sms_gateway.sender_id_requests;
+CREATE POLICY "Service role full access on sender_id_requests"
+ON sms_gateway.sender_id_requests
+FOR ALL
+TO service_role
+USING (true)
+WITH CHECK (true);
+

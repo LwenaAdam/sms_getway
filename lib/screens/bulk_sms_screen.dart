@@ -13,6 +13,7 @@ import '../groups/group_model.dart';
 import 'marketing/campaign_list_screen.dart';
 import 'download_app_banner.dart';
 import 'billing_screen.dart';
+import '../widgets/sender_id_dialog.dart';
 
 class BulkSmsScreen extends StatefulWidget {
   final VoidCallback? onNavigateToLogs;
@@ -508,6 +509,28 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
                                   color: Colors.grey.shade700,
                                 ),
                               ),
+                              if (currentChannel != 'thisPhone') ...[
+                                const SizedBox(height: 6),
+                                InkWell(
+                                  onTap: () => showSenderIdRequestDialog(context),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.badge, size: 14, color: Colors.teal.shade800),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Want your own company brand name? Request Sender ID',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.teal.shade800,
+                                          decoration: TextDecoration.underline,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
