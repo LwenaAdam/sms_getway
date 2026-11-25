@@ -51,13 +51,34 @@ class _SenderIdManagementDialogState extends State<_SenderIdManagementDialog> {
           ? savedSender.trim()
           : AppConstants.swalaSmsSenderId;
 
-      final tenantId = TenantService().tenantId;
-      if (tenantId != null) {
-        final res = await Supabase.instance.client
+      String? tenantId = TenantService().tenantId;
+      final user = Supabase.instance.client.auth.currentUser;
+
+      if (tenantId == null && user != null) {
+        try {
+          final member = await Supabase.instance.client
+              .schema('sms_gateway')
+              .from('tenant_members')
+              .select('tenant_id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+          tenantId = member?['tenant_id'] as String?;
+        } catch (_) {}
+      }
+
+      if (tenantId != null || user != null) {
+        final supabase = Supabase.instance.client;
+        final filter = tenantId != null && user != null
+            ? 'tenant_id.eq.$tenantId,user_id.eq.${user.id}'
+            : tenantId != null
+                ? 'tenant_id.eq.$tenantId'
+                : 'user_id.eq.${user!.id}';
+
+        final res = await supabase
             .schema('sms_gateway')
             .from('sender_id_requests')
             .select()
-            .eq('tenant_id', tenantId)
+            .or(filter)
             .order('created_at', ascending: false);
 
         _existingRequests = List<Map<String, dynamic>>.from(res);
@@ -122,11 +143,27 @@ class _SenderIdManagementDialogState extends State<_SenderIdManagementDialog> {
     setState(() => _isSubmitting = true);
 
     try {
-      final tenantId = TenantService().tenantId;
+      String? tenantId = TenantService().tenantId;
       final user = Supabase.instance.client.auth.currentUser;
 
-      if (tenantId == null || user == null) {
-        throw Exception('User or workspace not found');
+      if (user == null) {
+        throw Exception('User is not signed in. Please log in first.');
+      }
+
+      if (tenantId == null) {
+        try {
+          final member = await Supabase.instance.client
+              .schema('sms_gateway')
+              .from('tenant_members')
+              .select('tenant_id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+          tenantId = member?['tenant_id'] as String?;
+        } catch (_) {}
+      }
+
+      if (tenantId == null) {
+        throw Exception('Workspace not found. Please refresh or re-login.');
       }
 
       await Supabase.instance.client

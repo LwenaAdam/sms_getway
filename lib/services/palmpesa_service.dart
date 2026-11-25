@@ -317,14 +317,24 @@ class PalmPesaService {
           'updated_at': DateTime.now().toIso8601String(),
         }).eq('tenant_id', tenantId);
       } else {
-        await supabase.schema('sms_gateway').from('tenant_settings').insert({
-          'tenant_id': tenantId,
-          'default_sms_channel': 'swalaSMS',
-          'daily_sms_quota': currentDailyQuota,
-          'monthly_sms_quota': currentMonthlyQuota,
-          'plan_type': newPlanType,
-          'enable_bulk_sms': true,
-        });
+        try {
+          await supabase.schema('sms_gateway').from('tenant_settings').insert({
+            'tenant_id': tenantId,
+            'default_sms_channel': 'thisPhone',
+            'daily_sms_quota': currentDailyQuota,
+            'monthly_sms_quota': currentMonthlyQuota,
+            'plan_type': newPlanType,
+            'enable_bulk_sms': true,
+          });
+        } catch (e) {
+          debugPrint('⚠️ [PalmPesa] Fallback insert tenant_settings: $e');
+          await supabase.schema('sms_gateway').from('tenant_settings').upsert({
+            'tenant_id': tenantId,
+            'monthly_sms_quota': currentMonthlyQuota,
+            'daily_sms_quota': currentDailyQuota,
+            'plan_type': newPlanType,
+          }, onConflict: 'tenant_id');
+        }
       }
 
       // Mark payment as credited in metadata
@@ -342,6 +352,41 @@ class PalmPesaService {
       debugPrint('🎉 [PalmPesa] Quota credited successfully! New Monthly Quota: $currentMonthlyQuota ($newPlanType)');
     } catch (e) {
       debugPrint('⚠️ [PalmPesa] Error crediting quota: $e');
+    }
+  }
+
+  /// Check all pending payments for a tenant/user and credit completed ones
+  Future<int> syncPendingPayments({String? tenantId, String? userId}) async {
+    try {
+      final supabase = Supabase.instance.client;
+      var query = supabase
+          .schema('sms_gateway')
+          .from('payments')
+          .select()
+          .eq('status', 'pending');
+
+      if (tenantId != null && tenantId.isNotEmpty) {
+        query = query.eq('tenant_id', tenantId);
+      } else if (userId != null && userId.isNotEmpty) {
+        query = query.eq('user_id', userId);
+      }
+
+      final pendingList = await query.limit(10);
+      int resolvedCount = 0;
+
+      for (final tx in pendingList) {
+        final txId = tx['transaction_id'] as String?;
+        if (txId == null || txId.isEmpty) continue;
+
+        final status = await checkPaymentStatus(txId);
+        if (status == 'completed') {
+          resolvedCount++;
+        }
+      }
+      return resolvedCount;
+    } catch (e) {
+      debugPrint('⚠️ [PalmPesa] Error syncing pending payments: $e');
+      return 0;
     }
   }
 

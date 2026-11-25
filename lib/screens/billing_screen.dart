@@ -24,11 +24,57 @@ class _BillingScreenState extends State<BillingScreen> {
   final int _phoneFreeLimit = 100;
   String _planType = 'basic';
   List<Map<String, dynamic>> _transactions = [];
+  String? _verifyingTxId;
 
   @override
   void initState() {
     super.initState();
     _loadBillingData();
+  }
+
+  Future<void> _verifyTransaction(String transactionId) async {
+    setState(() => _verifyingTxId = transactionId);
+    try {
+      final status = await _palmPesa.checkPaymentStatus(transactionId);
+      if (!mounted) return;
+
+      if (status == 'completed') {
+        await _palmPesa.creditQuotaForPayment(transactionId);
+        await _loadBillingData();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🎉 Payment verified and SMS quota added successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else if (status == 'failed') {
+        await _loadBillingData();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ Payment failed or was cancelled by user.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⏳ Payment is still pending. Please enter your PIN on your phone to complete.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error checking payment: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _verifyingTxId = null);
+    }
   }
 
   Future<void> _loadBillingData() async {
@@ -42,6 +88,19 @@ class _BillingScreenState extends State<BillingScreen> {
     }
 
     try {
+      // 0. Auto-sync any pending payments from Palm Pesa gateway
+      try {
+        final synced = await _palmPesa.syncPendingPayments(
+          tenantId: tenantId,
+          userId: user?.id,
+        );
+        if (synced > 0) {
+          debugPrint('✅ [Billing] Auto-resolved $synced pending payment(s)');
+        }
+      } catch (e) {
+        debugPrint('⚠️ [Billing] Auto-sync error: $e');
+      }
+
       final supabase = Supabase.instance.client;
 
       // 1. Fetch tenant quota and plan settings
@@ -1203,6 +1262,34 @@ class _BillingScreenState extends State<BillingScreen> {
                                 ),
                               ],
                             ),
+                            if (!isCompleted && !isFailed && ref.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                height: 28,
+                                child: OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.orange.shade900,
+                                    side: BorderSide(color: Colors.orange.shade400),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                  onPressed: _verifyingTxId == ref
+                                      ? null
+                                      : () => _verifyTransaction(ref),
+                                  icon: _verifyingTxId == ref
+                                      ? const SizedBox(
+                                          width: 12,
+                                          height: 12,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        )
+                                      : const Icon(Icons.refresh, size: 14),
+                                  label: Text(
+                                    _verifyingTxId == ref ? 'Verifying...' : 'Verify Payment Status',
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
