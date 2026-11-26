@@ -14,6 +14,7 @@ import 'marketing/campaign_list_screen.dart';
 import 'download_app_banner.dart';
 import 'billing_screen.dart';
 import '../widgets/sender_id_dialog.dart';
+import '../widgets/responsive_layout.dart';
 
 class BulkSmsScreen extends StatefulWidget {
   final VoidCallback? onNavigateToLogs;
@@ -445,9 +446,11 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(AppTheme.paddingMedium),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+              child: ResponsiveCenter(
+                maxWidth: 860,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   // Download App Banner for web users
                   const DownloadAppBannerCompact(),
                   const SizedBox(height: AppTheme.paddingMedium),
@@ -705,6 +708,7 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
                 ],
               ),
             ),
+          ),
     );
   }
 

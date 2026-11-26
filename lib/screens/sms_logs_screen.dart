@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/theme.dart';
 import '../services/local_data_service.dart';
 import '../sms/sms_log_model.dart';
+import '../widgets/responsive_layout.dart';
 
 class SmsLogsScreen extends StatefulWidget {
   const SmsLogsScreen({super.key});
@@ -84,8 +85,10 @@ class _SmsLogsScreenState extends State<SmsLogsScreen> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
+          : ResponsiveCenter(
+              maxWidth: 960,
+              child: Column(
+                children: [
                 // Filter chips
                 Padding(
                   padding: const EdgeInsets.all(AppTheme.paddingMedium),
@@ -225,6 +228,7 @@ class _SmsLogsScreenState extends State<SmsLogsScreen> {
                 ),
               ],
             ),
+          ),
     );
   }
 

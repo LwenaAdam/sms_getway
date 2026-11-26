@@ -22,6 +22,7 @@ import 'screens/billing_screen.dart';
 import 'services/provider_manager_service.dart';
 import 'services/app_update_service.dart';
 import 'widgets/google_sign_in_button.dart';
+import 'widgets/responsive_layout.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -356,50 +357,47 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(
-      //   title: const Text('SMS Gateway'),
-      //   elevation: 0,
-      // ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppTheme.paddingLarge),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Download App Banner for web users
-            const DownloadAppBanner(),
-            SizedBox(height: MediaQuery.of(context).size.height * 0.1),
-            // Logo or Icon
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+      body: SafeArea(
+        child: ResponsiveAuthCard(
+          maxWidth: 460,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Download App Banner for web users
+              const DownloadAppBanner(),
+              const SizedBox(height: 20),
+              // Logo or Icon
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.sms,
+                  size: 40,
+                  color: AppTheme.primaryColor,
+                ),
               ),
-              child: const Icon(
-                Icons.sms,
-                size: 50,
-                color: AppTheme.primaryColor,
+              const SizedBox(height: AppTheme.paddingMedium),
+              Text(
+                'SMS Gateway',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryColor,
+                    ),
+                textAlign: TextAlign.center,
               ),
-            ),
-            const SizedBox(height: AppTheme.paddingLarge),
-            Text(
-              'SMS Gateway',
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryColor,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppTheme.paddingSmall),
-            Text(
-              'Professional Bulk SMS Management',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: MediaQuery.of(context).size.height * 0.08),
+              const SizedBox(height: 6),
+              Text(
+                'Professional Bulk SMS Management',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppTheme.paddingLarge),
             // Email field
             TextField(
               controller: emailController,
@@ -563,7 +561,8 @@ class _LoginPageState extends State<LoginPage> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   void _signInWithGoogle() async {

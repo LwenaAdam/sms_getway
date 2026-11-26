@@ -11,6 +11,7 @@ import '../groups/group_model.dart';
 import '../core/tenant_service.dart';
 import 'phonebook_sync_screen.dart';
 import 'duplicate_contacts_screen.dart';
+import '../widgets/responsive_layout.dart';
 
 class ContactsScreen extends StatefulWidget {
   const ContactsScreen({super.key});
@@ -1723,12 +1724,15 @@ class _ContactsScreenState extends State<ContactsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: isSelectionMode ? _buildSelectionAppBar() : _buildNormalAppBar(),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildContactsTab(),
-          _buildGroupsTab(),
-        ],
+      body: ResponsiveCenter(
+        maxWidth: 1000,
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            _buildContactsTab(),
+            _buildGroupsTab(),
+          ],
+        ),
       ),
       floatingActionButton: isSelectionMode
           ? null // Hide FAB in selection mode

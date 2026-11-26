@@ -6,6 +6,7 @@ import 'package:sms_gateway/services/marketing_service.dart';
 import 'package:sms_gateway/core/tenant_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'marketing/campaign_list_screen.dart';
+import '../widgets/responsive_layout.dart';
 
 /// Marketing Automation Settings Screen
 ///
@@ -314,9 +315,11 @@ class _MarketingSettingsScreenState extends State<MarketingSettingsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadSettings,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
+              child: ResponsiveCenter(
+                maxWidth: 820,
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
                   // Status Card
                   Card(
                     child: Padding(
@@ -430,11 +433,11 @@ class _MarketingSettingsScreenState extends State<MarketingSettingsScreen> {
                             style: const TextStyle(fontSize: 16),
                           ),
                           Slider(
-                            value: _dailyLimit.toDouble(),
+                            value: _dailyLimit.clamp(10, 500).toDouble(),
                             min: 10,
                             max: 500,
                             divisions: 49,
-                            label: _dailyLimit.toString(),
+                            label: _dailyLimit.clamp(10, 500).toString(),
                             onChanged: (value) {
                               setState(() => _dailyLimit = value.toInt());
                             },
@@ -562,6 +565,7 @@ class _MarketingSettingsScreenState extends State<MarketingSettingsScreen> {
                 ],
               ),
             ),
+          ),
     );
   }
 }

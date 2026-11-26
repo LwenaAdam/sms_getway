@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/tenant_service.dart';
 import '../services/palmpesa_service.dart';
 import '../widgets/sender_id_dialog.dart';
+import '../widgets/responsive_layout.dart';
 
 class BillingScreen extends StatefulWidget {
   const BillingScreen({super.key});
@@ -41,6 +42,7 @@ class _BillingScreenState extends State<BillingScreen> {
       if (status == 'completed') {
         await _palmPesa.creditQuotaForPayment(transactionId);
         await _loadBillingData();
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('🎉 Payment verified and SMS quota added successfully!'),
@@ -49,6 +51,7 @@ class _BillingScreenState extends State<BillingScreen> {
         );
       } else if (status == 'failed') {
         await _loadBillingData();
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('❌ Payment failed or was cancelled by user.'),
@@ -566,179 +569,206 @@ class _BillingScreenState extends State<BillingScreen> {
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Workspace & Plan Card
-                    Card(
-                      elevation: 1,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.teal.withValues(alpha: 0.12),
-                                shape: BoxShape.circle,
+                child: ResponsiveCenter(
+                  maxWidth: 1000,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Workspace & Plan Card
+                      Card(
+                        elevation: 1,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.teal.withValues(alpha: 0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.business,
+                                    color: Colors.teal),
                               ),
-                              child: const Icon(Icons.business,
-                                  color: Colors.teal),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    tenantName,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      tenantName,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Gateway Plan: ${_planType.toUpperCase()}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: isPaidGateway
-                                          ? Colors.teal
-                                          : Colors.orange.shade800,
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Gateway Plan: ${_planType.toUpperCase()}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: isPaidGateway
+                                            ? Colors.teal
+                                            : Colors.orange.shade800,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.green.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                    color: Colors.green.withValues(alpha: 0.3)),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                      color: Colors.green.withValues(alpha: 0.3)),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.check_circle,
+                                        color: Colors.green, size: 14),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Active',
+                                      style: TextStyle(
+                                          color: Colors.green,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.check_circle,
-                                      color: Colors.green, size: 14),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'Active',
-                                    style: TextStyle(
-                                        color: Colors.green,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                    // =========================================================
-                    // 1. CLOUD BULK SMS CARD (SENDER ID) - ZERO LIMITS
-                    // =========================================================
-                    _buildCloudBulkSmsCard(
-                      availableCredits: remainingCloudCredits,
-                      totalSent: _cloudSmsSent,
-                    ),
-                    const SizedBox(height: 16),
+                      // =========================================================
+                      // 1. CLOUD BULK SMS CARD (SENDER ID) - ZERO LIMITS
+                      // =========================================================
+                      _buildCloudBulkSmsCard(
+                        availableCredits: remainingCloudCredits,
+                        totalSent: _cloudSmsSent,
+                      ),
+                      const SizedBox(height: 16),
 
-                    // =========================================================
-                    // 2. PHONE SIM GATEWAY CARD - LIMIT ENFORCEMENT
-                    // =========================================================
-                    _buildPhoneSimGatewayCard(
-                      isPaid: isPaidGateway,
-                      phoneSent: _phoneSmsSent,
-                      freeLimit: _phoneFreeLimit,
-                      usagePercent: phoneUsagePercent,
-                    ),
-                    const SizedBox(height: 24),
+                      // =========================================================
+                      // 2. PHONE SIM GATEWAY CARD - LIMIT ENFORCEMENT
+                      // =========================================================
+                      _buildPhoneSimGatewayCard(
+                        isPaid: isPaidGateway,
+                        phoneSent: _phoneSmsSent,
+                        freeLimit: _phoneFreeLimit,
+                        usagePercent: phoneUsagePercent,
+                      ),
+                      const SizedBox(height: 24),
 
-                    // =========================================================
-                    // 3. PACKAGES (CLOUD TOP-UP & GATEWAY SUBSCRIPTION)
-                    // =========================================================
-                    const Text(
-                      'Subscription & Credit Packages',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Pay instantly via Mobile Money (M-Pesa, Tigo Pesa, Airtel Money, HaloPesa).',
-                      style: TextStyle(fontSize: 13, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 16),
+                      // =========================================================
+                      // 3. PACKAGES (CLOUD TOP-UP & GATEWAY SUBSCRIPTION)
+                      // =========================================================
+                      const Text(
+                        'Subscription & Credit Packages',
+                        style:
+                            TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Pay instantly via Mobile Money (M-Pesa, Tigo Pesa, Airtel Money, HaloPesa).',
+                        style: TextStyle(fontSize: 13, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
 
-                    // Pay-As-You-Go Cloud SMS (No Limits)
-                    _buildPlanCard(
-                      title: 'SMS Credit Top-Up (1,000 SMS)',
-                      price: '15,000 TZS',
-                      period: 'one-time',
-                      amount: 15000,
-                      badge: 'Pay-As-You-Go • No Limits',
-                      isPopular: true,
-                      features: [
-                        '1,000 Cloud SMS Credits added instantly',
-                        'Sender ID: SMS_GATEWAY (or your custom brand)',
-                        'NO daily limits — send 10 or 1,000 at once',
-                        'NO monthly expiration — just buy to use!',
-                        'REST API and Web Dashboard access',
-                      ],
-                      color: Colors.teal,
-                    ),
-                    const SizedBox(height: 14),
+                      // Responsive 3-Plan layout: Side-by-side on desktop/tablet, stacked on mobile
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final topUpCard = _buildPlanCard(
+                            title: 'SMS Credit Top-Up (1,000 SMS)',
+                            price: '15,000 TZS',
+                            period: 'one-time',
+                            amount: 15000,
+                            badge: 'Pay-As-You-Go • No Limits',
+                            isPopular: true,
+                            features: [
+                              '1,000 Cloud SMS Credits added instantly',
+                              'Sender ID: SMS_GATEWAY (or your custom brand)',
+                              'NO daily limits — send 10 or 1,000 at once',
+                              'NO monthly expiration — just buy to use!',
+                              'REST API and Web Dashboard access',
+                            ],
+                            color: Colors.teal,
+                          );
 
-                    // Phone SIM Gateway Subscriptions (Unlock unlimited device sending)
-                    _buildPlanCard(
-                      title: 'Starter Gateway',
-                      price: '25,000 TZS',
-                      period: '/ month',
-                      amount: 25000,
-                      badge: 'Unlock Unlimited Phone SIM',
-                      features: [
-                        'UNLIMITED SIM SMS from your Android device',
-                        'Lifts the 100 free SMS limit on your phone',
-                        'REST API Queue Access (/api/send)',
-                        '1,000 Contacts & Groups sync',
-                        'Offline-first synchronization',
-                      ],
-                      color: Colors.blue,
-                    ),
-                    const SizedBox(height: 14),
+                          final starterCard = _buildPlanCard(
+                            title: 'Starter Gateway',
+                            price: '25,000 TZS',
+                            period: '/ month',
+                            amount: 25000,
+                            badge: 'Unlock Unlimited Phone SIM',
+                            features: [
+                              'UNLIMITED SIM SMS from your Android device',
+                              'Lifts the 100 free SMS limit on your phone',
+                              'REST API Queue Access (/api/send)',
+                              '1,000 Contacts & Groups sync',
+                              'Offline-first synchronization',
+                            ],
+                            color: Colors.blue,
+                          );
 
-                    _buildPlanCard(
-                      title: 'Business Pro',
-                      price: '50,000 TZS',
-                      period: '/ month',
-                      amount: 50000,
-                      badge: 'High Volume Gateway',
-                      features: [
-                        'Everything in Starter',
-                        'UNLIMITED Phone SIM Gateway sending',
-                        'Custom Branded Sender ID registration support',
-                        'High-speed automated background queue',
-                        'Unlimited Contacts & API Keys',
-                      ],
-                      color: Colors.purple,
-                    ),
-                    const SizedBox(height: 28),
+                          final proCard = _buildPlanCard(
+                            title: 'Business Pro',
+                            price: '50,000 TZS',
+                            period: '/ month',
+                            amount: 50000,
+                            badge: 'High Volume Gateway',
+                            features: [
+                              'Everything in Starter',
+                              'UNLIMITED Phone SIM Gateway sending',
+                              'Custom Branded Sender ID registration support',
+                              'High-speed automated background queue',
+                              'Unlimited Contacts & API Keys',
+                            ],
+                            color: Colors.purple,
+                          );
 
-                    // =========================================================
-                    // 4. TRANSACTION HISTORY
-                    // =========================================================
-                    _buildTransactionHistorySection(),
-                    const SizedBox(height: 32),
-                  ],
+                          if (constraints.maxWidth >= 780) {
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: topUpCard),
+                                const SizedBox(width: 14),
+                                Expanded(child: starterCard),
+                                const SizedBox(width: 14),
+                                Expanded(child: proCard),
+                              ],
+                            );
+                          } else {
+                            return Column(
+                              children: [
+                                topUpCard,
+                                const SizedBox(height: 14),
+                                starterCard,
+                                const SizedBox(height: 14),
+                                proCard,
+                              ],
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 28),
+
+                      // =========================================================
+                      // 4. TRANSACTION HISTORY
+                      // =========================================================
+                      _buildTransactionHistorySection(),
+                      const SizedBox(height: 32),
+                    ],
+                  ),
                 ),
               ),
             ),

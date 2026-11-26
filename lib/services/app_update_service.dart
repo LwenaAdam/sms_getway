@@ -164,7 +164,7 @@ class AppUpdateService {
       }
     } else if (isManualCheck && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text(
             '✅ You are using the latest version (${AppConstants.appVersion})!',
           ),

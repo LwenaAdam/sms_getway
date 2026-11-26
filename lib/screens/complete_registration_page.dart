@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/theme.dart';
+import '../widgets/responsive_layout.dart';
 
 /// Complete Registration Flow with Organization Setup
 ///
@@ -61,25 +62,23 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
         title: const Text('Complete Registration'),
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(AppTheme.paddingLarge),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildProgressIndicator(),
-                const SizedBox(height: AppTheme.paddingLarge),
-                if (_currentStep == 0) _buildAccountStep(),
-                if (_currentStep == 1) _buildOrganizationStep(),
-                if (_currentStep == 2) _buildConfirmationStep(),
-                const SizedBox(height: AppTheme.paddingLarge),
-                if (errorMessage != null) _buildErrorMessage(),
-                const SizedBox(height: AppTheme.paddingLarge),
-                _buildNavigationButtons(),
-              ],
-            ),
+      body: ResponsiveAuthCard(
+        maxWidth: 580,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildProgressIndicator(),
+              const SizedBox(height: AppTheme.paddingLarge),
+              if (_currentStep == 0) _buildAccountStep(),
+              if (_currentStep == 1) _buildOrganizationStep(),
+              if (_currentStep == 2) _buildConfirmationStep(),
+              const SizedBox(height: AppTheme.paddingLarge),
+              if (errorMessage != null) _buildErrorMessage(),
+              const SizedBox(height: AppTheme.paddingLarge),
+              _buildNavigationButtons(),
+            ],
           ),
         ),
       ),

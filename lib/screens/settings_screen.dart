@@ -18,6 +18,7 @@ import 'api_settings_screen.dart';
 import 'marketing_settings_screen.dart';
 import 'billing_screen.dart';
 import '../widgets/sender_id_dialog.dart';
+import '../widgets/responsive_layout.dart';
 import '../services/provider_manager_service.dart';
 import '../services/app_update_service.dart';
 import '../core/constants.dart';
@@ -393,8 +394,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
-      body: ListView(
-        children: [
+      body: ResponsiveCenter(
+        maxWidth: 820,
+        child: ListView(
+          children: [
           const SizedBox(height: AppTheme.paddingMedium),
 
           // Current Workspace Section
@@ -958,7 +961,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ListTile(
             leading: const Icon(Icons.system_update),
             title: const Text('Check for Updates'),
-            subtitle: Text('Current version: v${AppConstants.appVersion} (${AppConstants.appBuildNumber})'),
+            subtitle: const Text('Current version: v${AppConstants.appVersion} (${AppConstants.appBuildNumber})'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               AppUpdateService().checkForUpdates(context, isManualCheck: true);
@@ -1021,6 +1024,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 }

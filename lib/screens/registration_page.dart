@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/theme.dart';
+import '../widgets/responsive_layout.dart';
 
 class RegistrationPage extends StatefulWidget {
   const RegistrationPage({super.key});
@@ -33,8 +34,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
         title: const Text('Create Account'),
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppTheme.paddingLarge),
+      body: ResponsiveAuthCard(
+        maxWidth: 480,
         child: Form(
           key: _formKey,
           child: Column(
