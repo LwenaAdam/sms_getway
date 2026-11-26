@@ -30,10 +30,13 @@ class AppConstants {
 
   // ===== APP CONFIGURATION =====
   static const String appName = 'SMS Gateway Pro';
-  static const String appVersion = '1.0.0';
+  static const String appVersion = '1.1.0';
+  static const int appBuildNumber = 2;
   static const String appCompanyName = 'LWENATECH';
   static const String appDescription =
       'Professional Bulk SMS Management System';
+  static const String appUpdateUrl =
+      'https://smsgetway.techware.africa/version.json';
 
   // ===== QUICKSMS API CONFIGURATION =====
   static const String quickSmsBaseUrl = 'https://api.quicksms.com.ng/v1';

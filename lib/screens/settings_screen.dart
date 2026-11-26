@@ -19,6 +19,8 @@ import 'marketing_settings_screen.dart';
 import 'billing_screen.dart';
 import '../widgets/sender_id_dialog.dart';
 import '../services/provider_manager_service.dart';
+import '../services/app_update_service.dart';
+import '../core/constants.dart';
 
 // SMS Channel options
 enum SmsChannel { thisPhone, quickSMS, swalaSMS, customProvider }
@@ -954,19 +956,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(),
 
           ListTile(
+            leading: const Icon(Icons.system_update),
+            title: const Text('Check for Updates'),
+            subtitle: Text('Current version: v${AppConstants.appVersion} (${AppConstants.appBuildNumber})'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              AppUpdateService().checkForUpdates(context, isManualCheck: true);
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.info),
             title: const Text('About'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               showAboutDialog(
                 context: context,
-                applicationName: 'SMS Gateway',
-                applicationVersion: '1.0.0',
+                applicationName: AppConstants.appName,
+                applicationVersion: 'v${AppConstants.appVersion}',
                 applicationIcon: const Icon(Icons.sms, size: 48),
                 children: [
                   const Text('Professional Bulk SMS Management System'),
                   const SizedBox(height: 16),
-                  const Text('© 2024 SMS Gateway'),
+                  Text('© ${DateTime.now().year} ${AppConstants.appCompanyName}'),
                 ],
               );
             },

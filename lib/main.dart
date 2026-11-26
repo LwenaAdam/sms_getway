@@ -20,6 +20,7 @@ import 'screens/complete_registration_page.dart';
 import 'screens/download_app_banner.dart';
 import 'screens/billing_screen.dart';
 import 'services/provider_manager_service.dart';
+import 'services/app_update_service.dart';
 import 'widgets/google_sign_in_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -718,6 +719,14 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _loadData();
     _checkAndPromptSmsPermissionOnLaunch();
+    // Check for app updates/bugfixes in background on launch
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          AppUpdateService().checkForUpdates(context);
+        }
+      });
+    });
   }
 
   /// Proactively prompt for SMS & Phone permissions on launch for Android Gateway

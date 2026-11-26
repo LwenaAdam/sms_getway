@@ -1,0 +1,14 @@
+{
+  "version": "1.1.0",
+  "build_number": 2,
+  "release_date": "2026-11-26",
+  "title": "SMS Gateway Pro v1.1.0",
+  "release_notes": [
+    "Added automated Mobile Money verification & status refresh",
+    "Fixed SMS quota crediting upon Palm Pesa completion",
+    "Enabled instant Sender ID submission & tracking",
+    "Enhanced database sync & offline resilience"
+  ],
+  "download_url": "https://smsgetway.techware.africa/download/app",
+  "force_update": false
+}
