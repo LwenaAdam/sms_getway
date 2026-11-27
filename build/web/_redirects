@@ -1,9 +1,0 @@
-/palmpesa-api/* https://palmpesa.co.tz/:splat 200!
-/api/* https://kzjgdeqfmxkmpmadtbpb.supabase.co/functions/v1/sms-api/:splat 200!
-/api https://kzjgdeqfmxkmpmadtbpb.supabase.co/functions/v1/sms-api 200!
-/api-docs /api-docs.html 200
-/openapi.yaml /openapi.yaml 200
-/download/app /downloads/sms_gateway_pro.apk 200
-/download/apk /downloads/sms_gateway_pro.apk 200
-/sms_gateway_pro.apk /downloads/sms_gateway_pro.apk 200
-/* /index.html 200

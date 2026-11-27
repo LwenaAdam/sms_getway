@@ -807,28 +807,36 @@ class _ContactsScreenState extends State<ContactsScreen>
         initialChildSize: 0.7,
         minChildSize: 0.5,
         maxChildSize: 0.95,
-        builder: (_, scrollController) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              // Handle
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+        builder: (bottomSheetContext, scrollController) {
+          final isDark = Theme.of(bottomSheetContext).brightness == Brightness.dark;
+          return Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              children: [
+                // Handle
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF444444) : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
 
-              // Summary Card
-              Card(
-                margin: const EdgeInsets.all(16),
-                color: Colors.blue.shade50,
+                // Summary Card
+                Card(
+                  margin: const EdgeInsets.all(16),
+                  color: isDark ? const Color(0xFF1E2836) : Colors.blue.shade50,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: isDark ? const Color(0xFF2C3E50) : Colors.blue.shade100,
+                    ),
+                  ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -1009,9 +1017,10 @@ class _ContactsScreenState extends State<ContactsScreen>
                   ),
                 ),
               ),
-            ],
-          ),
-        ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -1956,31 +1965,74 @@ class _ContactsScreenState extends State<ContactsScreen>
 
     return Column(
       children: [
-        // Search bar
-        Padding(
-          padding: const EdgeInsets.all(AppTheme.paddingMedium),
-          child: TextField(
-            controller: _searchController,
-            onChanged: _filterContacts,
-            decoration: InputDecoration(
-              hintText: 'Search contacts by name or number',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        _filterContacts('');
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+        // Search bar (Adaptive for Light & Dark mode)
+        Builder(
+          builder: (context) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            return Padding(
+              padding: const EdgeInsets.all(AppTheme.paddingMedium),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _filterContacts,
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
+                  fontSize: 15,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Search contacts by name or number',
+                  hintStyle: TextStyle(
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    fontSize: 14,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: isDark ? Colors.grey.shade300 : Colors.grey.shade600,
+                  ),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(
+                            Icons.clear,
+                            color: isDark
+                                ? Colors.grey.shade300
+                                : Colors.grey.shade600,
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            _filterContacts('');
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: isDark
+                          ? Colors.grey.shade700
+                          : Colors.grey.shade300,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: isDark
+                          ? Colors.grey.shade700
+                          : Colors.grey.shade300,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: AppTheme.primaryColor,
+                      width: 2,
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: isDark
+                      ? const Color(0xFF1E1E1E)
+                      : Colors.grey.shade100,
+                ),
               ),
-              filled: true,
-              fillColor: Colors.grey.shade100,
-            ),
-          ),
+            );
+          },
         ),
         // Contact list
         Expanded(

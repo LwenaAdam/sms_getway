@@ -227,13 +227,18 @@ class ApiSmsQueueService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Fetch pending requests (prioritized, scheduled ones ready)
-      // Note: Querying all pending requests regardless of tenant
-      final response = await _supabase
+      // Fetch pending requests for current tenant (prioritized, scheduled ones ready)
+      var query = _supabase
           .schema('sms_gateway')
           .from('sms_requests')
           .select()
-          .eq('status', 'pending')
+          .eq('status', 'pending');
+
+      if (tenantId != null && tenantId.isNotEmpty) {
+        query = query.eq('tenant_id', tenantId);
+      }
+
+      final response = await query
           .or('scheduled_at.is.null,scheduled_at.lte.${DateTime.now().toIso8601String()}')
           .order('priority', ascending: false)
           .order('created_at', ascending: true)
@@ -283,9 +288,110 @@ class ApiSmsQueueService extends ChangeNotifier {
         return;
       }
 
+      final activeTenantId = TenantService().tenantId;
+      final effectiveTenantId = (request.tenantId.isNotEmpty && request.tenantId != 'null')
+          ? request.tenantId
+          : (activeTenantId ?? '');
+
       // Check user's SMS channel preference
       final selectedChannel = await SmsService.getSelectedChannel();
-      debugPrint('📱 Using SMS channel: $selectedChannel');
+      debugPrint('📱 Using SMS channel: $selectedChannel for tenant $effectiveTenantId');
+
+      // =========================================================================
+      // STRICT QUOTA & PLAN LIMIT VERIFICATION BEFORE SENDING
+      // =========================================================================
+      if (selectedChannel == 'thisPhone') {
+        try {
+          final settingsRes = await _supabase
+              .schema('sms_gateway')
+              .from('tenant_settings')
+              .select('plan_type')
+              .eq('tenant_id', effectiveTenantId)
+              .maybeSingle();
+
+          final planType = (settingsRes?['plan_type'] as String?) ?? 'basic';
+
+          if (planType == 'basic') {
+            // Check total SIM SMS sent across sms_logs and sms_requests
+            final logsCountRes = await _supabase
+                .schema('sms_gateway')
+                .from('sms_logs')
+                .select('id')
+                .eq('tenant_id', effectiveTenantId)
+                .eq('status', 'sent')
+                .eq('channel', 'thisPhone')
+                .count(CountOption.exact);
+
+            final reqsCountRes = await _supabase
+                .schema('sms_gateway')
+                .from('sms_requests')
+                .select('id')
+                .eq('tenant_id', effectiveTenantId)
+                .eq('status', 'sent')
+                .count(CountOption.exact);
+
+            final totalPhoneSent = (logsCountRes.count > reqsCountRes.count)
+                ? logsCountRes.count
+                : reqsCountRes.count;
+
+            const int freePhoneLimit = 100;
+            if (totalPhoneSent >= freePhoneLimit) {
+              debugPrint('🛑 Queue Halted: Free phone SIM limit ($freePhoneLimit) reached for tenant $effectiveTenantId');
+              await _updateRequestStatus(
+                request.id,
+                'failed',
+                errorMessage:
+                    'Phone SIM free limit ($freePhoneLimit SMS) reached on Basic plan. Upgrade to Starter Gateway (25,000 TZS/mo) to unlock unlimited sending.',
+              );
+              stop(); // Stop automated queue processing to prevent infinite retry loops
+              notifyListeners();
+              return;
+            }
+          }
+        } catch (e) {
+          debugPrint('⚠️ Error verifying SIM limit in queue: $e');
+        }
+      } else {
+        // Cloud Gateway (Sender ID) - Check available credit balance
+        try {
+          final settingsRes = await _supabase
+              .schema('sms_gateway')
+              .from('tenant_settings')
+              .select('monthly_sms_quota')
+              .eq('tenant_id', effectiveTenantId)
+              .maybeSingle();
+
+          final totalCredits =
+              (settingsRes?['monthly_sms_quota'] as int?) ?? 0;
+
+          final countRes = await _supabase
+              .schema('sms_gateway')
+              .from('sms_logs')
+              .select('id')
+              .eq('tenant_id', effectiveTenantId)
+              .eq('status', 'sent')
+              .neq('channel', 'thisPhone')
+              .count(CountOption.exact);
+
+          final int availableCredits =
+              (totalCredits - countRes.count).clamp(0, 999999999);
+
+          if (availableCredits <= 0) {
+            debugPrint('🛑 Queue Halted: 0 Cloud SMS credits available for tenant $effectiveTenantId');
+            await _updateRequestStatus(
+              request.id,
+              'failed',
+              errorMessage:
+                  'Insufficient Cloud SMS credits (Balance: 0). Top up credits freely (from just 15 SMS = 225 TZS) to send.',
+            );
+            stop(); // Stop automated queue processing
+            notifyListeners();
+            return;
+          }
+        } catch (e) {
+          debugPrint('⚠️ Error verifying cloud credits in queue: $e');
+        }
+      }
 
       // Send the SMS using the selected channel
       final success = selectedChannel == 'quickSMS'
@@ -293,31 +399,31 @@ class ApiSmsQueueService extends ChangeNotifier {
               phoneNumber: request.phoneNumber,
               message: request.message,
               userId: userId,
-              tenantId: request.tenantId,
+              tenantId: effectiveTenantId,
             )
           : selectedChannel == 'swalaSMS'
               ? await SmsService.sendViaSwalaSms(
                   phoneNumber: request.phoneNumber,
                   message: request.message,
                   userId: userId,
-                  tenantId: request.tenantId,
+                  tenantId: effectiveTenantId,
                 )
-              : selectedChannel == 'thisPhone'
-                  ? await SmsService.sendViaNativeAndroid(
-                      phoneNumber: request.phoneNumber,
-                      message: request.message,
-                      userId: userId,
-                      tenantId: request.tenantId,
-                    )
-                  : await SmsService.sendViaDynamicProvider(
-                      phoneNumber: request.phoneNumber,
-                      message: request.message,
-                      userId: userId,
-                      tenantId: request.tenantId,
-                      providerId: selectedChannel.startsWith('provider:')
-                          ? selectedChannel.replaceFirst('provider:', '')
-                          : selectedChannel,
-                    );
+          : selectedChannel == 'thisPhone'
+              ? await SmsService.sendViaNativeAndroid(
+                  phoneNumber: request.phoneNumber,
+                  message: request.message,
+                  userId: userId,
+                  tenantId: effectiveTenantId,
+                )
+              : await SmsService.sendViaDynamicProvider(
+                  phoneNumber: request.phoneNumber,
+                  message: request.message,
+                  userId: userId,
+                  tenantId: effectiveTenantId,
+                  providerId: selectedChannel.startsWith('provider:')
+                      ? selectedChannel.replaceFirst('provider:', '')
+                      : selectedChannel,
+                );
 
       if (success) {
         await _updateRequestStatus(request.id, 'sent');

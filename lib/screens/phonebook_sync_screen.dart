@@ -137,12 +137,20 @@ class _PhonebookSyncScreenState extends State<PhonebookSyncScreen> {
     final summary =
         PhonebookSyncService.getSummary(_phonebookResults, _duplicates);
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       children: [
         // Summary Card
         Card(
           margin: const EdgeInsets.all(16),
-          color: Colors.blue.shade50,
+          color: isDark ? const Color(0xFF1E2836) : Colors.blue.shade50,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: isDark ? const Color(0xFF2C3E50) : Colors.blue.shade100,
+            ),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(

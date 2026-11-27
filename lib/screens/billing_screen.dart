@@ -22,6 +22,7 @@ class _BillingScreenState extends State<BillingScreen> {
   int _cloudSmsCredits = 0;
   int _cloudSmsSent = 0;
   int _phoneSmsSent = 0;
+  int _apiQueueSent = 0;
   final int _phoneFreeLimit = 100;
   String _planType = 'basic';
   List<Map<String, dynamic>> _transactions = [];
@@ -133,7 +134,7 @@ class _BillingScreenState extends State<BillingScreen> {
         debugPrint('⚠️ Error fetching tenant_settings: $e');
       }
 
-      // 2. Count Phone SIM vs Cloud SMS logs
+      // 2. Count Phone SIM vs Cloud SMS logs + API Queue Requests
       try {
         final phoneSentRes = await supabase
             .schema('sms_gateway')
@@ -143,7 +144,6 @@ class _BillingScreenState extends State<BillingScreen> {
             .eq('status', 'sent')
             .eq('channel', 'thisPhone')
             .count(CountOption.exact);
-        _phoneSmsSent = phoneSentRes.count;
 
         final cloudSentRes = await supabase
             .schema('sms_gateway')
@@ -153,12 +153,32 @@ class _BillingScreenState extends State<BillingScreen> {
             .eq('status', 'sent')
             .neq('channel', 'thisPhone')
             .count(CountOption.exact);
+
+        // Fetch sent requests from sms_requests (API / Queue)
+        final queueSentRes = await supabase
+            .schema('sms_gateway')
+            .from('sms_requests')
+            .select('id')
+            .eq('tenant_id', tenantId)
+            .eq('status', 'sent')
+            .count(CountOption.exact);
+
+        _apiQueueSent = queueSentRes.count;
+
+        // Since the Android device acts as SIM Gateway for API queue requests:
+        // Total Phone SMS sent is the maximum of logged phone SMS or queue sent (or combined)
+        final int rawPhoneLogs = phoneSentRes.count;
+        final int rawQueueSent = queueSentRes.count;
+        _phoneSmsSent = (rawPhoneLogs > rawQueueSent)
+            ? rawPhoneLogs
+            : (rawPhoneLogs == 0 ? rawQueueSent : rawPhoneLogs + rawQueueSent);
+
         _cloudSmsSent = cloudSentRes.count;
       } catch (e) {
         debugPrint('⚠️ Error counting sms_logs by channel: $e');
       }
 
-      // 3. Fetch transaction history from payments table
+      // 3. Fetch transaction history from payments table & reconcile quota
       try {
         final filterQuery = user != null
             ? 'tenant_id.eq.$tenantId,user_id.eq.${user.id}'
@@ -173,6 +193,41 @@ class _BillingScreenState extends State<BillingScreen> {
             .limit(30);
 
         _transactions = List<Map<String, dynamic>>.from(paymentsRes);
+
+        // Reconcile credits from actual completed transactions to prevent inflation
+        int totalPaidCredits = 0;
+        for (final tx in _transactions) {
+          final status = (tx['status'] ?? '').toString().toLowerCase();
+          if (status == 'completed') {
+            final planName = (tx['plan_name'] ?? '').toString();
+            final amount = (tx['amount'] as num?)?.toDouble() ?? 0.0;
+            final match =
+                RegExp(r'(\d[\d,]*)\s*sms', caseSensitive: false).firstMatch(planName);
+            if (match != null) {
+              totalPaidCredits +=
+                  int.tryParse(match.group(1)!.replaceAll(',', '')) ?? 0;
+            } else if (!planName.toLowerCase().contains('gateway') && amount > 0) {
+              totalPaidCredits += (amount / 15).round();
+            }
+          }
+        }
+
+        // If the database has 2,000 (from the old 1,000 default bug) but user only paid for 1,000:
+        if (totalPaidCredits > 0 && _cloudSmsCredits > totalPaidCredits) {
+          debugPrint(
+              '🔧 Reconciling inflated cloud credits: was $_cloudSmsCredits, setting to exact paid $totalPaidCredits');
+          _cloudSmsCredits = totalPaidCredits;
+          // Background update to correct the database row in Supabase
+          supabase
+              .schema('sms_gateway')
+              .from('tenant_settings')
+              .update({
+                'monthly_sms_quota': totalPaidCredits,
+                'updated_at': DateTime.now().toIso8601String()
+              })
+              .eq('tenant_id', tenantId)
+              .catchError((_) {});
+        }
       } catch (e) {
         debugPrint('⚠️ Error fetching payments: $e');
       }
@@ -659,6 +714,18 @@ class _BillingScreenState extends State<BillingScreen> {
                       const SizedBox(height: 16),
 
                       // =========================================================
+                      // 0. GENERAL PICTURE OF SMS & WAYS USED (OVERVIEW DASHBOARD)
+                      // =========================================================
+                      _buildSmsGeneralPictureCard(
+                        totalPhoneSent: _phoneSmsSent,
+                        totalCloudSent: _cloudSmsSent,
+                        apiQueueSent: _apiQueueSent,
+                        cloudCredits: remainingCloudCredits,
+                        isPaidGateway: isPaidGateway,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // =========================================================
                       // 1. CLOUD BULK SMS CARD (SENDER ID) - ZERO LIMITS
                       // =========================================================
                       _buildCloudBulkSmsCard(
@@ -776,6 +843,216 @@ class _BillingScreenState extends State<BillingScreen> {
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildSmsGeneralPictureCard({
+    required int totalPhoneSent,
+    required int totalCloudSent,
+    required int apiQueueSent,
+    required int cloudCredits,
+    required bool isPaidGateway,
+  }) {
+    final int grandTotalSent = totalPhoneSent + totalCloudSent;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isDark ? Colors.grey.shade800 : Colors.teal.shade200,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child:
+                          const Icon(Icons.analytics, color: Colors.blue, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'SMS Usage Overview',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          'General picture of SMS sent and channels used',
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: isDark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade700),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${NumberFormat('#,###').format(grandTotalSent)} Total Sent',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            const SizedBox(height: 16),
+            // Distribution breakdown tiles
+            Row(
+              children: [
+                Expanded(
+                  child: _buildBreakdownBox(
+                    icon: Icons.phone_android,
+                    label: 'Device SIM',
+                    value: '$totalPhoneSent',
+                    subtext: isPaidGateway
+                        ? 'Unlimited Active'
+                        : '$totalPhoneSent / 100 Used',
+                    color: (totalPhoneSent > 100 && !isPaidGateway)
+                        ? Colors.red
+                        : Colors.orange,
+                    isExceeded: totalPhoneSent > 100 && !isPaidGateway,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildBreakdownBox(
+                    icon: Icons.cloud_done,
+                    label: 'Cloud Sender ID',
+                    value: '$totalCloudSent',
+                    subtext: '$cloudCredits Credits Left',
+                    color: Colors.teal,
+                    isExceeded: false,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildBreakdownBox(
+                    icon: Icons.api,
+                    label: 'API / Queue',
+                    value: '$apiQueueSent',
+                    subtext: 'Auto Queue',
+                    color: Colors.purple,
+                    isExceeded: false,
+                  ),
+                ),
+              ],
+            ),
+            if (totalPhoneSent >= 100 && !isPaidGateway) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border:
+                      Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded,
+                        color: Colors.red, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        totalPhoneSent > 100
+                            ? 'Phone SIM limit exceeded ($totalPhoneSent/100 sent). Upgrade to Starter Gateway for unlimited phone sending.'
+                            : '100 free Phone SIM limit reached. Upgrade to continue sending from your phone.',
+                        style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBreakdownBox({
+    required IconData icon,
+    required String label,
+    required String value,
+    required String subtext,
+    required Color color,
+    required bool isExceeded,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: isDark ? 0.15 : 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isExceeded ? Colors.red : color.withValues(alpha: 0.25),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Icon(icon, size: 18, color: isExceeded ? Colors.red : color),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isExceeded ? Colors.red : color,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            subtext,
+            style: TextStyle(
+              fontSize: 10,
+              color: isExceeded ? Colors.red : Colors.grey,
+              fontWeight: isExceeded ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1027,7 +1304,9 @@ class _BillingScreenState extends State<BillingScreen> {
                   ),
                   Text(
                     hasReachedLimit
-                        ? '0 Remaining (Upgrade Required)'
+                        ? (phoneSent > freeLimit
+                            ? 'Limit Exceeded ($phoneSent sent)'
+                            : '0 Remaining (Upgrade Required)')
                         : '${freeLimit - phoneSent} Free Remaining',
                     style: TextStyle(
                       fontSize: 12,

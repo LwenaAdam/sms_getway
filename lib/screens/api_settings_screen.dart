@@ -7,9 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../services/api_sms_queue_service.dart';
+import 'api_documentation_screen.dart';
 
 class ApiSettingsScreen extends StatefulWidget {
-  const ApiSettingsScreen({super.key});
+  final int initialIndex;
+
+  const ApiSettingsScreen({super.key, this.initialIndex = 0});
 
   @override
   State<ApiSettingsScreen> createState() => _ApiSettingsScreenState();
@@ -29,7 +32,11 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialIndex.clamp(0, 2),
+    );
     _loadData();
   }
 
@@ -750,216 +757,6 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen>
   // ============================================================================
 
   Widget _buildDocsTab() {
-    final endpoint = _queueService.getApiEndpoint();
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Endpoint card
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'API Endpoint',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Theme.of(context).dividerColor,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: SelectableText(
-                            endpoint,
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.copy,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                          tooltip: 'Copy endpoint',
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(text: endpoint));
-                            _showSuccess('Endpoint copied');
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Authentication
-          const Text(
-            'Authentication',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Include your API key in the request header:',
-            style: TextStyle(color: Colors.grey),
-          ),
-          const SizedBox(height: 8),
-          _buildCodeBlock('x-api-key: sgw_your_api_key_here'),
-
-          const SizedBox(height: 24),
-
-          // Send single SMS
-          const Text(
-            'Send Single SMS',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text('POST /sms-api/send'),
-          const SizedBox(height: 8),
-          _buildCodeBlock('''
-{
-  "phone_number": "+255683274343",
-  "message": "Hello from API!",
-  "external_id": "order-123",
-  "priority": 0
-}'''),
-
-          const SizedBox(height: 24),
-
-          // Send bulk SMS
-          const Text(
-            'Send Bulk SMS',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text('POST /sms-api/bulk'),
-          const SizedBox(height: 8),
-          _buildCodeBlock('''
-{
-  "phone_numbers": [
-    "+255683274343",
-    "+0987654321"
-  ],
-  "message": "Hello from API!",
-  "priority": 0
-}'''),
-
-          const SizedBox(height: 24),
-
-          // Check status
-          const Text(
-            'Check Status',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text('GET /sms-api/status/:request_id'),
-          const SizedBox(height: 8),
-          _buildCodeBlock('''
-// Response
-{
-  "success": true,
-  "request_id": "uuid",
-  "phone_number": "+255683274343",
-  "status": "sent",
-  "created_at": "2025-12-23T10:00:00Z",
-  "processed_at": "2025-12-23T10:00:05Z"
-}'''),
-
-          const SizedBox(height: 24),
-
-          // Rate limits
-          Card(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Rate Limits',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '• 100 requests per minute per API key',
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                  ),
-                  Text(
-                    '• Maximum 1000 recipients per bulk request',
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 40),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCodeBlock(String code) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Stack(
-        children: [
-          SelectableText(
-            code,
-            style: const TextStyle(
-              fontFamily: 'monospace',
-              color: Colors.white,
-              fontSize: 13,
-            ),
-          ),
-          Positioned(
-            top: 0,
-            right: 0,
-            child: IconButton(
-              icon: const Icon(Icons.copy, color: Colors.white54, size: 16),
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: code));
-                _showSuccess('Code copied');
-              },
-            ),
-          ),
-        ],
-      ),
-    );
+    return const ApiDocumentationView(isStandalone: false);
   }
 }

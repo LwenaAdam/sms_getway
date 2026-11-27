@@ -89,11 +89,26 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
           .neq('channel', 'thisPhone')
           .count(CountOption.exact);
 
+      // Also count sent requests from sms_requests (API & automated queue)
+      final queueSentRes = await supabase
+          .schema('sms_gateway')
+          .from('sms_requests')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .eq('status', 'sent')
+          .count(CountOption.exact);
+
+      final int rawPhoneLogs = phoneCountRes.count;
+      final int rawQueueSent = queueSentRes.count;
+      final int totalPhoneSent = (rawPhoneLogs > rawQueueSent)
+          ? rawPhoneLogs
+          : (rawPhoneLogs == 0 ? rawQueueSent : rawPhoneLogs + rawQueueSent);
+
       if (mounted) {
         setState(() {
           _cloudCredits = quota;
           _planType = plan;
-          _phoneSent = phoneCountRes.count;
+          _phoneSent = totalPhoneSent;
           _cloudSent = cloudCountRes.count;
           _isLoadingQuota = false;
         });
@@ -596,6 +611,7 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
       );
     }
 
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final bool isPhone = currentChannel == 'thisPhone';
     final bool isPaidGateway = _planType == 'starter' || _planType == 'pro';
     final int availableCloudCredits =
@@ -609,13 +625,16 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
           margin: const EdgeInsets.only(bottom: 16),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.blue.shade50,
+            color: isDark ? const Color(0xFF1E2836) : Colors.blue.shade50,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.blue.shade200),
+            border: Border.all(
+              color: isDark ? const Color(0xFF2C3E50) : Colors.blue.shade200,
+            ),
           ),
           child: Row(
             children: [
-              const Icon(Icons.verified, color: Colors.blue, size: 22),
+              Icon(Icons.verified,
+                  color: isDark ? Colors.blue.shade300 : Colors.blue, size: 22),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -623,7 +642,7 @@ class _BulkSmsScreenState extends State<BulkSmsScreen> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade900,
+                    color: isDark ? Colors.blue.shade200 : Colors.blue.shade900,
                   ),
                 ),
               ),

@@ -15,6 +15,7 @@ import 'screens/bulk_sms_screen.dart';
 import 'screens/sms_logs_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/api_settings_screen.dart';
+import 'screens/api_documentation_screen.dart';
 import 'screens/tenant_selector_screen.dart';
 import 'screens/complete_registration_page.dart';
 import 'screens/download_app_banner.dart';
@@ -541,20 +542,15 @@ class _LoginPageState extends State<LoginPage> {
             const SizedBox(height: AppTheme.paddingLarge),
             const Divider(),
             const SizedBox(height: AppTheme.paddingSmall),
-            // Direct API Documentation Access Button
+            // Direct API Documentation Access Button (Dedicated documentation view for guests/developers)
             TextButton.icon(
-              onPressed: () async {
-                if (kIsWeb) {
-                  final uri = Uri.parse('/api-docs.html');
-                  await launchUrl(uri);
-                } else {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ApiSettingsScreen(),
-                    ),
-                  );
-                }
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ApiDocumentationScreen(),
+                  ),
+                );
               },
               icon: const Icon(Icons.menu_book, size: 18),
               label: const Text('View Developer API Documentation'),
@@ -605,39 +601,55 @@ class _LoginPageState extends State<LoginPage> {
       if (!kIsWeb) {
         // Mobile (Android / iOS): Native Google Play Services dialog
         // Shows only app name ("SMS_GETWAY_PRO") and logo — ZERO browser, ZERO Supabase URL!
-        debugPrint('🔑 Starting Native Google Sign-In with serverClientId...');
+        try {
+          debugPrint('🔑 Starting Native Google Sign-In with serverClientId...');
 
-        final GoogleSignIn googleSignIn = GoogleSignIn(
-          serverClientId: AppConstants.googleClientIdWeb,
-        );
+          final GoogleSignIn googleSignIn = GoogleSignIn(
+            serverClientId: AppConstants.googleClientIdWeb,
+          );
 
-        final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-        if (googleUser == null) {
-          // User dismissed or cancelled the Google account picker
-          debugPrint('ℹ️ Google sign-in cancelled by user');
+          final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+          if (googleUser == null) {
+            // User dismissed or cancelled the Google account picker
+            debugPrint('ℹ️ Google sign-in cancelled by user');
+            return;
+          }
+
+          final GoogleSignInAuthentication googleAuth =
+              await googleUser.authentication;
+          final String? idToken = googleAuth.idToken;
+          final String? accessToken = googleAuth.accessToken;
+
+          if (idToken == null) {
+            throw Exception('Failed to obtain Google ID Token.');
+          }
+
+          final authResponse =
+              await Supabase.instance.client.auth.signInWithIdToken(
+            provider: OAuthProvider.google,
+            idToken: idToken,
+            accessToken: accessToken,
+          );
+
+          if (authResponse.user != null && mounted) {
+            debugPrint(
+                '✅ Native Google Sign-In successful: ${authResponse.user!.email}');
+            await _handlePostAuthUser(authResponse.user!);
+            return;
+          }
+        } catch (nativeError) {
+          debugPrint('⚠️ Native Google Sign-In encountered error: $nativeError');
+          debugPrint('🔄 Gracefully falling back to Supabase Web OAuth redirect so user is not blocked...');
+
+          // Fallback seamlessly to Web OAuth redirect
+          final String? redirectUrl =
+              Uri.base.hasAuthority ? '${Uri.base.origin}/' : null;
+          await Supabase.instance.client.auth.signInWithOAuth(
+            OAuthProvider.google,
+            redirectTo: redirectUrl,
+            authScreenLaunchMode: LaunchMode.externalApplication,
+          );
           return;
-        }
-
-        final GoogleSignInAuthentication googleAuth =
-            await googleUser.authentication;
-        final String? idToken = googleAuth.idToken;
-        final String? accessToken = googleAuth.accessToken;
-
-        if (idToken == null) {
-          throw Exception('Failed to obtain Google ID Token.');
-        }
-
-        final authResponse =
-            await Supabase.instance.client.auth.signInWithIdToken(
-          provider: OAuthProvider.google,
-          idToken: idToken,
-          accessToken: accessToken,
-        );
-
-        if (authResponse.user != null && mounted) {
-          debugPrint(
-              '✅ Native Google Sign-In successful: ${authResponse.user!.email}');
-          await _handlePostAuthUser(authResponse.user!);
         }
       } else {
         // Web: First attempt client-side Google Identity Services (GIS) via ID Token.
@@ -1354,7 +1366,7 @@ class _HomePageState extends State<HomePage> {
                                             context,
                                             MaterialPageRoute(
                                               builder: (_) =>
-                                                  const ApiSettingsScreen(),
+                                                  const ApiDocumentationScreen(),
                                             ),
                                           );
                                         },

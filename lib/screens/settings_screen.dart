@@ -480,6 +480,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               return ListTile(
                 leading: const Icon(Icons.dark_mode),
                 title: const Text('Dark Mode'),
+                subtitle: Text(
+                  themeProvider.isUsingSystemTheme
+                      ? 'System Default (${themeProvider.isDarkMode ? "Dark" : "Light"})'
+                      : (themeProvider.isDarkMode ? 'Dark' : 'Light'),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                  ),
+                ),
                 trailing: Opacity(
                   opacity: themeProvider.isLoading ? 0.5 : 1.0,
                   child: Switch(

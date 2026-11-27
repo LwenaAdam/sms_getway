@@ -340,6 +340,7 @@ class _CampaignCreateScreenState extends State<CampaignCreateScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditing ? 'Edit Campaign' : 'New Campaign'),
@@ -393,10 +394,16 @@ class _CampaignCreateScreenState extends State<CampaignCreateScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Preview Card
+            // Preview Card - Adaptive Dark/Light Mode
             if (_messageController.text.isNotEmpty) ...[
               Card(
-                color: Colors.blue.shade50,
+                color: isDark ? const Color(0xFF1E2836) : Colors.blue.shade50,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: isDark ? const Color(0xFF2C3E50) : Colors.blue.shade100,
+                  ),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
@@ -404,16 +411,29 @@ class _CampaignCreateScreenState extends State<CampaignCreateScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.preview, size: 16),
-                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.preview,
+                            size: 16,
+                            color: isDark ? Colors.blue.shade300 : Colors.blue.shade700,
+                          ),
+                          const SizedBox(width: 6),
                           Text(
                             'Preview',
-                            style: Theme.of(context).textTheme.labelLarge,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.blue.shade200 : Colors.blue.shade900,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text(_renderPreview()),
+                      Text(
+                        _renderPreview(),
+                        style: TextStyle(
+                          color: isDark ? const Color(0xFFE0E0E0) : Colors.grey.shade800,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -690,23 +710,32 @@ class _CampaignCreateScreenState extends State<CampaignCreateScreen> {
               ],
             ),
 
-            // Info Cards
+            // Info Cards - Adaptive Dark/Light Mode
             const SizedBox(height: 16),
             Card(
-              color: Colors.blue.shade50,
+              color: isDark ? const Color(0xFF1E2836) : Colors.blue.shade50,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: isDark ? const Color(0xFF2C3E50) : Colors.blue.shade100,
+                ),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
-                    const Icon(Icons.info_outline,
-                        color: Colors.blue, size: 20),
+                    Icon(
+                      Icons.info_outline,
+                      color: isDark ? Colors.blue.shade300 : Colors.blue.shade700,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Showing all ${_totalContactCount > 0 ? _totalContactCount : _loadedContactCount} contacts. Use groups for quick selection.',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.blue.shade900,
+                          color: isDark ? const Color(0xFFE0E0E0) : Colors.blue.shade900,
                         ),
                       ),
                     ),
@@ -715,20 +744,29 @@ class _CampaignCreateScreenState extends State<CampaignCreateScreen> {
               ),
             ),
             Card(
-              color: Colors.orange.shade50,
+              color: isDark ? const Color(0xFF2E2215) : Colors.orange.shade50,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: isDark ? const Color(0xFF4A341E) : Colors.orange.shade200,
+                ),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
-                    const Icon(Icons.warning_outlined,
-                        color: Colors.orange, size: 20),
+                    Icon(
+                      Icons.warning_outlined,
+                      color: isDark ? Colors.orange.shade300 : Colors.orange.shade800,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Daily limit: 100 SMS/day. Each contact receives max 2 SMS per 30 days.',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.orange.shade900,
+                          color: isDark ? const Color(0xFFE0E0E0) : Colors.orange.shade900,
                         ),
                       ),
                     ),

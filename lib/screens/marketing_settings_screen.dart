@@ -300,6 +300,7 @@ class _MarketingSettingsScreenState extends State<MarketingSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isAndroid = !kIsWeb && Platform.isAndroid;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -383,7 +384,9 @@ class _MarketingSettingsScreenState extends State<MarketingSettingsScreen> {
                             value: _dailyLimit > 0
                                 ? _dailySentCount / _dailyLimit
                                 : 0,
-                            backgroundColor: Colors.grey[200],
+                            backgroundColor: isDark
+                                ? const Color(0xFF333333)
+                                : Colors.grey[200],
                             valueColor: AlwaysStoppedAnimation<Color>(
                               _dailySentCount >= _dailyLimit
                                   ? Colors.red
@@ -528,35 +531,49 @@ class _MarketingSettingsScreenState extends State<MarketingSettingsScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Info Card
+                  // Info Card (How it works) - Adaptive Dark/Light Mode
                   Card(
-                    color: Colors.blue[50],
-                    child: const Padding(
-                      padding: EdgeInsets.all(16),
+                    color: isDark ? const Color(0xFF1E2836) : Colors.blue.shade50,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: isDark ? const Color(0xFF2C3E50) : Colors.blue.shade100,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.info_outline, color: Colors.blue),
-                              SizedBox(width: 8),
+                              Icon(
+                                Icons.info_outline,
+                                color: isDark ? Colors.blue.shade300 : Colors.blue.shade700,
+                              ),
+                              const SizedBox(width: 8),
                               Text(
                                 'How it works',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.blue.shade200 : Colors.blue.shade900,
                                 ),
                               ),
                             ],
                           ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 10),
                           Text(
                             '• Checks for campaigns every 30 minutes\n'
                             '• Sends SMS in batches (10 per check)\n'
                             '• Enforces 2 SMS per phone per 30 days\n'
                             '• Respects opt-out list\n'
                             '• Runs in background (battery optimized)',
-                            style: TextStyle(fontSize: 14),
+                            style: TextStyle(
+                              fontSize: 14,
+                              height: 1.5,
+                              color: isDark ? const Color(0xFFE0E0E0) : Colors.grey.shade800,
+                            ),
                           ),
                         ],
                       ),
