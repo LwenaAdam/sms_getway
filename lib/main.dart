@@ -23,6 +23,7 @@ import 'services/provider_manager_service.dart';
 import 'services/app_update_service.dart';
 import 'widgets/google_sign_in_button.dart';
 import 'widgets/responsive_layout.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -572,23 +573,85 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      // Dynamic multiplatform redirect URL:
-      // - Web: Uses current domain origin (e.g. https://smsgetway.techware.africa/)
-      // - Mobile: Uses Android deep link scheme (io.supabase.smsgetway://login-callback)
-      final String? redirectUrl = kIsWeb
-          ? (Uri.base.hasAuthority ? '${Uri.base.origin}/' : null)
-          : 'io.supabase.smsgetway://login-callback';
+      if (kIsWeb) {
+        // Web: Use OAuth redirect with current domain origin
+        final String? redirectUrl =
+            Uri.base.hasAuthority ? '${Uri.base.origin}/' : null;
 
-      debugPrint(
-          '🔑 Starting Google OAuth with redirect: $redirectUrl (platform: ${kIsWeb ? "Web" : "Mobile"})');
+        debugPrint('🔑 Starting Web Google OAuth with redirect: $redirectUrl');
 
-      await Supabase.instance.client.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: redirectUrl,
-        authScreenLaunchMode: kIsWeb
-            ? LaunchMode.platformDefault
-            : LaunchMode.externalApplication,
-      );
+        await Supabase.instance.client.auth.signInWithOAuth(
+          OAuthProvider.google,
+          redirectTo: redirectUrl,
+          authScreenLaunchMode: LaunchMode.platformDefault,
+        );
+      } else {
+        // Mobile (Android / iOS): Native Google Play Services dialog
+        // Shows only app name ("SMS Gateway Pro") and logo — ZERO browser, ZERO Supabase URL!
+        debugPrint('🔑 Starting Native Google Sign-In with serverClientId...');
+
+        final GoogleSignIn googleSignIn = GoogleSignIn(
+          serverClientId: AppConstants.googleClientIdWeb,
+        );
+
+        final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+        if (googleUser == null) {
+          // User dismissed or cancelled the Google account picker
+          debugPrint('ℹ️ Google sign-in cancelled by user');
+          return;
+        }
+
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
+        final String? idToken = googleAuth.idToken;
+        final String? accessToken = googleAuth.accessToken;
+
+        if (idToken == null) {
+          throw Exception('Failed to obtain Google ID Token.');
+        }
+
+        final authResponse =
+            await Supabase.instance.client.auth.signInWithIdToken(
+          provider: OAuthProvider.google,
+          idToken: idToken,
+          accessToken: accessToken,
+        );
+
+        if (authResponse.user != null && mounted) {
+          debugPrint(
+              '✅ Native Google Sign-In successful: ${authResponse.user!.email}');
+
+          // Verify or auto-provision workspace for user
+          final tenantService = TenantService();
+          bool hasAccess =
+              await tenantService.loadTenantsForUser(authResponse.user!.id);
+
+          if (!hasAccess || tenantService.tenantsCount == 0) {
+            final autoCreated = await tenantService
+                .autoProvisionWorkspaceForUser(authResponse.user!);
+            if (autoCreated) {
+              hasAccess =
+                  await tenantService.loadTenantsForUser(authResponse.user!.id);
+            }
+          }
+
+          if (mounted) {
+            if (tenantService.shouldShowTenantPicker) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (_) => TenantSelectorScreen(
+                    tenants: tenantService.tenants,
+                  ),
+                ),
+              );
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const HomePage()),
+              );
+            }
+          }
+        }
+      }
     } catch (e) {
       debugPrint('❌ Google sign-in error: $e');
       if (mounted) {

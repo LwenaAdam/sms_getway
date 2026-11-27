@@ -38,6 +38,20 @@ class AppConstants {
   static const String appUpdateUrl =
       'https://smsgetway.techware.africa/version.json';
 
+  // ===== GOOGLE OAUTH CONFIGURATION =====
+  // Web Client ID used by Supabase to verify the Google ID token
+  static const String googleClientIdWeb = String.fromEnvironment(
+    'GOOGLE_CLIENT_ID_WEB',
+    defaultValue:
+        '369259019097-ptj9m3686dt9o96420mmfq03gd8hoj33.apps.googleusercontent.com',
+  );
+  // Android Client ID registered in Google Cloud Console
+  static const String googleClientIdAndroid = String.fromEnvironment(
+    'GOOGLE_CLIENT_ID_ANDROID',
+    defaultValue:
+        '369259019097-nv971d3gqqktcn1389r7mljgmstmqn5d.apps.googleusercontent.com',
+  );
+
   // ===== QUICKSMS API CONFIGURATION =====
   static const String quickSmsBaseUrl = 'https://api.quicksms.com.ng/v1';
   static const String quickSmsApiKey = String.fromEnvironment(
