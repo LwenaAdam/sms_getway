@@ -566,6 +566,35 @@ class _LoginPageState extends State<LoginPage> {
   );
   }
 
+  Future<void> _handlePostAuthUser(User user) async {
+    final tenantService = TenantService();
+    bool hasAccess = await tenantService.loadTenantsForUser(user.id);
+
+    if (!hasAccess || tenantService.tenantsCount == 0) {
+      final autoCreated =
+          await tenantService.autoProvisionWorkspaceForUser(user);
+      if (autoCreated) {
+        hasAccess = await tenantService.loadTenantsForUser(user.id);
+      }
+    }
+
+    if (mounted) {
+      if (tenantService.shouldShowTenantPicker) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => TenantSelectorScreen(
+              tenants: tenantService.tenants,
+            ),
+          ),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomePage()),
+        );
+      }
+    }
+  }
+
   void _signInWithGoogle() async {
     setState(() {
       isGoogleLoading = true;
@@ -573,21 +602,9 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      if (kIsWeb) {
-        // Web: Use OAuth redirect with current domain origin
-        final String? redirectUrl =
-            Uri.base.hasAuthority ? '${Uri.base.origin}/' : null;
-
-        debugPrint('🔑 Starting Web Google OAuth with redirect: $redirectUrl');
-
-        await Supabase.instance.client.auth.signInWithOAuth(
-          OAuthProvider.google,
-          redirectTo: redirectUrl,
-          authScreenLaunchMode: LaunchMode.platformDefault,
-        );
-      } else {
+      if (!kIsWeb) {
         // Mobile (Android / iOS): Native Google Play Services dialog
-        // Shows only app name ("SMS Gateway Pro") and logo — ZERO browser, ZERO Supabase URL!
+        // Shows only app name ("SMS_GETWAY_PRO") and logo — ZERO browser, ZERO Supabase URL!
         debugPrint('🔑 Starting Native Google Sign-In with serverClientId...');
 
         final GoogleSignIn googleSignIn = GoogleSignIn(
@@ -620,36 +637,63 @@ class _LoginPageState extends State<LoginPage> {
         if (authResponse.user != null && mounted) {
           debugPrint(
               '✅ Native Google Sign-In successful: ${authResponse.user!.email}');
+          await _handlePostAuthUser(authResponse.user!);
+        }
+      } else {
+        // Web: First attempt client-side Google Identity Services (GIS) via ID Token.
+        // This avoids redirecting to Supabase domain during sign-in!
+        bool gisSuccess = false;
+        try {
+          debugPrint('🔑 Starting Web Google Identity Services sign-in...');
+          final GoogleSignIn googleSignIn = GoogleSignIn(
+            clientId: AppConstants.googleClientIdWeb,
+          );
 
-          // Verify or auto-provision workspace for user
-          final tenantService = TenantService();
-          bool hasAccess =
-              await tenantService.loadTenantsForUser(authResponse.user!.id);
+          final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+          if (googleUser != null) {
+            final GoogleSignInAuthentication googleAuth =
+                await googleUser.authentication;
+            final String? idToken = googleAuth.idToken;
+            final String? accessToken = googleAuth.accessToken;
 
-          if (!hasAccess || tenantService.tenantsCount == 0) {
-            final autoCreated = await tenantService
-                .autoProvisionWorkspaceForUser(authResponse.user!);
-            if (autoCreated) {
-              hasAccess =
-                  await tenantService.loadTenantsForUser(authResponse.user!.id);
-            }
-          }
-
-          if (mounted) {
-            if (tenantService.shouldShowTenantPicker) {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (_) => TenantSelectorScreen(
-                    tenants: tenantService.tenants,
-                  ),
-                ),
+            if (idToken != null) {
+              final authResponse =
+                  await Supabase.instance.client.auth.signInWithIdToken(
+                provider: OAuthProvider.google,
+                idToken: idToken,
+                accessToken: accessToken,
               );
-            } else {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const HomePage()),
-              );
+
+              if (authResponse.user != null && mounted) {
+                gisSuccess = true;
+                debugPrint(
+                    '✅ Web Google GIS Sign-In successful: ${authResponse.user!.email}');
+                await _handlePostAuthUser(authResponse.user!);
+                return;
+              }
             }
+          } else {
+            // User cancelled Google picker dialog
+            debugPrint('ℹ️ Web Google sign-in cancelled by user');
+            return;
           }
+        } catch (webGisError) {
+          debugPrint(
+              'ℹ️ Web GIS prompt unavailable or blocked, falling back to OAuth redirect: $webGisError');
+        }
+
+        if (!gisSuccess) {
+          // Fallback: Web OAuth redirect flow
+          final String? redirectUrl =
+              Uri.base.hasAuthority ? '${Uri.base.origin}/' : null;
+
+          debugPrint('🔑 Starting Web Google OAuth redirect: $redirectUrl');
+
+          await Supabase.instance.client.auth.signInWithOAuth(
+            OAuthProvider.google,
+            redirectTo: redirectUrl,
+            authScreenLaunchMode: LaunchMode.platformDefault,
+          );
         }
       }
     } catch (e) {

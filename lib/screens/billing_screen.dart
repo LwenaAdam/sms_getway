@@ -19,13 +19,22 @@ class _BillingScreenState extends State<BillingScreen> {
   final TenantService _tenantService = TenantService();
 
   bool _isLoading = true;
-  int _cloudSmsCredits = 1000;
+  int _cloudSmsCredits = 0;
   int _cloudSmsSent = 0;
   int _phoneSmsSent = 0;
   final int _phoneFreeLimit = 100;
   String _planType = 'basic';
   List<Map<String, dynamic>> _transactions = [];
   String? _verifyingTxId;
+  int _customSmsCount = 50;
+  final TextEditingController _customSmsController =
+      TextEditingController(text: '50');
+
+  @override
+  void dispose() {
+    _customSmsController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -117,7 +126,7 @@ class _BillingScreenState extends State<BillingScreen> {
 
         if (settingsRes != null) {
           _cloudSmsCredits =
-              (settingsRes['monthly_sms_quota'] as int?) ?? 1000;
+              (settingsRes['monthly_sms_quota'] as int?) ?? 0;
           _planType = (settingsRes['plan_type'] as String?) ?? 'basic';
         }
       } catch (e) {
@@ -673,7 +682,7 @@ class _BillingScreenState extends State<BillingScreen> {
                       // 3. PACKAGES (CLOUD TOP-UP & GATEWAY SUBSCRIPTION)
                       // =========================================================
                       const Text(
-                        'Subscription & Credit Packages',
+                        'Buy SMS Credits & Subscriptions',
                         style:
                             TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
@@ -684,26 +693,25 @@ class _BillingScreenState extends State<BillingScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Responsive 3-Plan layout: Side-by-side on desktop/tablet, stacked on mobile
+                      // 1. Flexible Custom SMS Credit Purchase (Buy as little as 100 SMS)
+                      _buildCustomSmsPurchaseCard(),
+                      const SizedBox(height: 20),
+
+                      const Text(
+                        'Device SIM Gateway Subscriptions',
+                        style:
+                            TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Unlock unlimited phone SIM sending directly from your Android phone bundle.',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Responsive 2-Plan layout for Phone SIM Gateway
                       LayoutBuilder(
                         builder: (context, constraints) {
-                          final topUpCard = _buildPlanCard(
-                            title: 'SMS Credit Top-Up (1,000 SMS)',
-                            price: '15,000 TZS',
-                            period: 'one-time',
-                            amount: 15000,
-                            badge: 'Pay-As-You-Go • No Limits',
-                            isPopular: true,
-                            features: [
-                              '1,000 Cloud SMS Credits added instantly',
-                              'Sender ID: SMS_GATEWAY (or your custom brand)',
-                              'NO daily limits — send 10 or 1,000 at once',
-                              'NO monthly expiration — just buy to use!',
-                              'REST API and Web Dashboard access',
-                            ],
-                            color: Colors.teal,
-                          );
-
                           final starterCard = _buildPlanCard(
                             title: 'Starter Gateway',
                             price: '25,000 TZS',
@@ -736,12 +744,10 @@ class _BillingScreenState extends State<BillingScreen> {
                             color: Colors.purple,
                           );
 
-                          if (constraints.maxWidth >= 780) {
+                          if (constraints.maxWidth >= 720) {
                             return Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(child: topUpCard),
-                                const SizedBox(width: 14),
                                 Expanded(child: starterCard),
                                 const SizedBox(width: 14),
                                 Expanded(child: proCard),
@@ -750,8 +756,6 @@ class _BillingScreenState extends State<BillingScreen> {
                           } else {
                             return Column(
                               children: [
-                                topUpCard,
-                                const SizedBox(height: 14),
                                 starterCard,
                                 const SizedBox(height: 14),
                                 proCard,
@@ -1349,6 +1353,216 @@ class _BillingScreenState extends State<BillingScreen> {
             },
           ),
       ],
+    );
+  }
+
+  Widget _buildCustomSmsPurchaseCard() {
+    final int totalAmount = (_customSmsCount * 15).clamp(0, 999999999);
+    final presets = [15, 50, 100, 250, 500, 1000, 2500];
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: Colors.teal, width: 2),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.bolt, color: Colors.teal, size: 24),
+                    ),
+                    const SizedBox(width: 12),
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Buy SMS Credits Freely',
+                          style: TextStyle(
+                              fontSize: 17, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          'From just 15 SMS • 15 TZS per SMS',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.teal.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Text(
+                    'No Expiration',
+                    style: TextStyle(
+                      color: Colors.teal,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Quick Select SMS Quantity:',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: presets.map((count) {
+                final isSelected = _customSmsCount == count;
+                final price = NumberFormat('#,###').format(count * 15);
+                return ChoiceChip(
+                  label: Text('$count SMS ($price TZS)'),
+                  selected: isSelected,
+                  selectedColor: Colors.teal.shade100,
+                  labelStyle: TextStyle(
+                    color: isSelected ? Colors.teal.shade900 : Colors.black87,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 11,
+                  ),
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() {
+                        _customSmsCount = count;
+                        _customSmsController.text = count.toString();
+                      });
+                    }
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _customSmsController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Or Type Any Custom Quantity',
+                hintText: 'e.g. 25',
+                prefixIcon: const Icon(Icons.pin),
+                suffixText: 'SMS',
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                helperText:
+                    'Minimum 15 SMS (225 TZS) • Instant Mobile Money Top-Up',
+                isDense: true,
+              ),
+              onChanged: (val) {
+                final count = int.tryParse(val) ?? 0;
+                setState(() {
+                  _customSmsCount = count;
+                });
+              },
+            ),
+            const SizedBox(height: 14),
+            // Price calculation summary
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.teal.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.teal.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Total to Pay (15 TZS/SMS):',
+                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                      Text(
+                        '${NumberFormat('#,###').format(totalAmount)} TZS',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.teal,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.teal.shade200),
+                    ),
+                    child: Text(
+                      '${NumberFormat('#,###').format(_customSmsCount)} Credits',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal.shade900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: _customSmsCount < 15
+                    ? null
+                    : () {
+                        final formattedCount =
+                            NumberFormat('#,###').format(_customSmsCount);
+                        final formattedPrice =
+                            NumberFormat('#,###').format(totalAmount);
+                        _openCheckoutDialog(
+                          planName:
+                              'SMS Credit Top-Up ($formattedCount SMS)',
+                          amount: totalAmount.toDouble(),
+                          description:
+                              'Buy $formattedCount Cloud SMS credits for $formattedPrice TZS',
+                        );
+                      },
+                icon: const Icon(Icons.payment, size: 20),
+                label: Text(
+                  _customSmsCount < 15
+                      ? 'Enter at least 15 SMS (225 TZS)'
+                      : 'Pay ${NumberFormat('#,###').format(totalAmount)} TZS via Mobile Money',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

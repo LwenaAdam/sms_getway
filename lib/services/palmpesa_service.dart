@@ -279,6 +279,9 @@ class PalmPesaService {
 
       final tenantId = payment['tenant_id'] as String;
       final planName = (payment['plan_name'] ?? '').toString().toLowerCase();
+      final double amount = payment['amount'] is num
+          ? (payment['amount'] as num).toDouble()
+          : 0.0;
 
       // Read current tenant settings
       final settings = await supabase
@@ -288,16 +291,11 @@ class PalmPesaService {
           .eq('tenant_id', tenantId)
           .maybeSingle();
 
-      int currentMonthlyQuota = settings?['monthly_sms_quota'] as int? ?? 1000;
+      int currentMonthlyQuota = settings?['monthly_sms_quota'] as int? ?? 0;
       int currentDailyQuota = settings?['daily_sms_quota'] as int? ?? 100;
       String newPlanType = settings?['plan_type'] as String? ?? 'basic';
 
-      if (planName.contains('1,000') ||
-          planName.contains('top-up') ||
-          planName.contains('credit')) {
-        currentMonthlyQuota += 1000;
-        currentDailyQuota = currentDailyQuota < 500 ? 500 : currentDailyQuota;
-      } else if (planName.contains('starter')) {
+      if (planName.contains('starter')) {
         newPlanType = 'starter';
         currentMonthlyQuota = currentMonthlyQuota < 25000 ? 25000 : currentMonthlyQuota + 25000;
         currentDailyQuota = currentDailyQuota < 1000 ? 1000 : currentDailyQuota;
@@ -306,7 +304,27 @@ class PalmPesaService {
         currentMonthlyQuota = currentMonthlyQuota < 100000 ? 100000 : currentMonthlyQuota + 100000;
         currentDailyQuota = currentDailyQuota < 5000 ? 5000 : currentDailyQuota;
       } else {
-        currentMonthlyQuota += 1000;
+        // Dynamic custom SMS Top-Up:
+        // Try parsing SMS count from plan_name e.g. "SMS Credit Top-Up (500 SMS)"
+        int creditsToAdd = 0;
+        final smsMatch =
+            RegExp(r'(\d[\d,]*)\s*sms', caseSensitive: false).firstMatch(planName);
+        if (smsMatch != null) {
+          final parsed = int.tryParse(smsMatch.group(1)!.replaceAll(',', ''));
+          if (parsed != null && parsed > 0) {
+            creditsToAdd = parsed;
+          }
+        }
+        // Fallback: derive from amount paid at 15 TZS per SMS
+        if (creditsToAdd == 0 && amount > 0) {
+          creditsToAdd = (amount / 15).round();
+        }
+        if (creditsToAdd == 0) {
+          creditsToAdd = 1000;
+        }
+
+        currentMonthlyQuota += creditsToAdd;
+        currentDailyQuota = currentDailyQuota < 500 ? 500 : currentDailyQuota;
       }
 
       if (settings != null) {

@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/theme.dart';
 import '../core/tenant_service.dart';
 import '../core/constants.dart';
+import '../screens/billing_screen.dart';
 
 /// Shows unified dialog for requesting and managing custom Sender IDs
 void showSenderIdRequestDialog(BuildContext context, {VoidCallback? onUpdated}) {
@@ -33,6 +34,7 @@ class _SenderIdManagementDialogState extends State<_SenderIdManagementDialog> {
   bool _isLoading = true;
   bool _isSubmitting = false;
   bool _showForm = false;
+  bool _hasActivePaidService = false;
   String _activeSenderId = 'SMS_GATEWAY';
   List<Map<String, dynamic>> _existingRequests = [];
 
@@ -44,6 +46,7 @@ class _SenderIdManagementDialogState extends State<_SenderIdManagementDialog> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
+    bool hasPaidService = false;
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedSender = prefs.getString('swala_sms_sender_id');
@@ -82,6 +85,45 @@ class _SenderIdManagementDialogState extends State<_SenderIdManagementDialog> {
             .order('created_at', ascending: false);
 
         _existingRequests = List<Map<String, dynamic>>.from(res);
+
+        // Check if user/tenant has completed payments
+        try {
+          final paymentRes = await supabase
+              .schema('sms_gateway')
+              .from('payments')
+              .select('id')
+              .or(filter)
+              .eq('status', 'completed')
+              .limit(1);
+
+          if (paymentRes.isNotEmpty) {
+            hasPaidService = true;
+          }
+        } catch (e) {
+          debugPrint('⚠️ Error checking payment records for sender id: $e');
+        }
+
+        // Check if tenant has paid plan or purchased SMS quota
+        if (!hasPaidService && tenantId != null) {
+          try {
+            final settingsRes = await supabase
+                .schema('sms_gateway')
+                .from('tenant_settings')
+                .select('plan_type, monthly_sms_quota')
+                .eq('tenant_id', tenantId)
+                .maybeSingle();
+
+            if (settingsRes != null) {
+              final plan = (settingsRes['plan_type'] as String?) ?? 'basic';
+              final quota = (settingsRes['monthly_sms_quota'] as int?) ?? 0;
+              if (plan == 'starter' || plan == 'pro' || quota > 0) {
+                hasPaidService = true;
+              }
+            }
+          } catch (e) {
+            debugPrint('⚠️ Error checking tenant plan for sender id: $e');
+          }
+        }
       }
     } catch (e) {
       debugPrint('⚠️ Error loading sender id requests: $e');
@@ -89,8 +131,9 @@ class _SenderIdManagementDialogState extends State<_SenderIdManagementDialog> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          // Show form by default if there are no prior requests
-          _showForm = _existingRequests.isEmpty;
+          _hasActivePaidService = hasPaidService;
+          // Show form by default only if user has active paid service and no requests yet
+          _showForm = _hasActivePaidService && _existingRequests.isEmpty;
         });
       }
     }
@@ -112,6 +155,17 @@ class _SenderIdManagementDialogState extends State<_SenderIdManagementDialog> {
   }
 
   Future<void> _submitRequest() async {
+    if (!_hasActivePaidService) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Please purchase SMS credits or subscribe to a plan before requesting a Sender ID'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final senderId = _senderIdController.text.trim().toUpperCase();
     final businessName = _businessNameController.text.trim();
     final purpose = _purposeController.text.trim();
@@ -432,8 +486,67 @@ class _SenderIdManagementDialogState extends State<_SenderIdManagementDialog> {
                       const SizedBox(height: 10),
                     ],
 
-                    // Request Sender ID Form
-                    if (_showForm) ...[
+                    // Request Sender ID Form (or Locked Prerequisite Card)
+                    if (!_hasActivePaidService) ...[
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.amber.shade300),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.lock_outline,
+                                    color: Colors.amber.shade900),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Paid Service Required',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: Colors.amber.shade900,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Custom branded Sender ID registration requires an active service in our app. '
+                              'Please purchase SMS credits (starting freely from just 15 SMS = 225 TZS) or subscribe to a Gateway plan first to unlock your custom brand Sender ID.',
+                              style: TextStyle(fontSize: 13, color: Colors.black87),
+                            ),
+                            const SizedBox(height: 14),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.teal,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => const BillingScreen()),
+                                  );
+                                },
+                                icon: const Icon(Icons.shopping_cart, size: 18),
+                                label: const Text('Buy SMS Credits / View Plans'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ] else if (_showForm) ...[
                       const Text(
                         'A Sender ID is the custom brand name (max 11 chars) that appears on recipients\' phones instead of a phone number.',
                         style: TextStyle(fontSize: 13, color: Colors.grey),
